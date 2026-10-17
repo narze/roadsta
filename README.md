@@ -1,5 +1,9 @@
 # Tesler Roadsta - Test Drive
 
+[![CI](https://github.com/narze/roadsta/actions/workflows/ci.yml/badge.svg)](https://github.com/narze/roadsta/actions/workflows/ci.yml)
+
+Play: https://roadsta.vercel.app
+
 A browser test drive of the Tesler Roadsta with a cold-gas thruster pack.
 The car does not fly. It launches very fast, hops, and hovers for a short time.
 
@@ -8,6 +12,7 @@ Stack: Vite, React, three.js, React Three Fiber, drei, Rapier physics, postproce
 ## Run
 
 ```sh
+mise install   # Node and pnpm versions from mise.toml
 pnpm install
 pnpm dev
 ```
