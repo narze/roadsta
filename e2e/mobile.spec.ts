@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true })
 
-type Hud = { mph: number; gas: number; airborne: boolean; hovering: boolean }
+type Hud = { mph: number; gas: number; airborne: boolean; hovering: boolean; trick: string | null; score: number }
 const hud = (page: Page) => page.evaluate(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState())
 
 async function start(page: Page) {
@@ -43,6 +43,18 @@ test('the boost button fires the thrusters', async ({ page }) => {
   await page.mouse.move(c.x, c.y)
   await page.mouse.down()
   await expect.poll(async () => (await hud(page)).mph, { timeout: 15_000 }).toBeGreaterThan(10)
+  await page.mouse.up()
+})
+
+test('flicking up on the hop button in the air does a front flip', async ({ page }) => {
+  await start(page)
+  const c = await center(page.getByRole('button', { name: 'Hop' }))
+  await page.mouse.move(c.x, c.y)
+  await page.mouse.down()
+  await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
+  await page.mouse.move(c.x, c.y - 70, { steps: 2 })
+  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('frontFlip')
+  await expect(page.getByTestId('toast')).toContainText('Front flip', { timeout: 20_000 })
   await page.mouse.up()
 })
 

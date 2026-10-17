@@ -10,10 +10,12 @@ import { useGame } from './store'
 import { GRAVITY } from './physics'
 import { initialThrusters, THRUSTER, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
+import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
 
 const START: [number, number, number] = [0, 0.5, 0]
 const HALF_HEIGHT = 0.45 // collider half height + rounding
 const MPS_TO_MPH = 2.23694
+const HOP_GRACE = 0.15 // seconds
 
 const DRIVE = {
   accel: 16, // m/s^2 at rest, about 0-60 mph in 1.9 s
@@ -37,6 +39,11 @@ const euler = new THREE.Euler()
 export function Car({ target }: { target: React.RefObject<THREE.Object3D | null> }) {
   const body = useRef<RapierRigidBody>(null)
   const visual = useRef<THREE.Group>(null)
+  const trickGroup = useRef<THREE.Group>(null)
+  const tricks = useRef(initialTricks())
+  const trickQueued = useRef<TrickKind | null>(null)
+  const wasAirborne = useRef(false)
+  const hopGrace = useRef(0)
   const fx = useRef<ThrusterFx>({ hover: 0, boost: 0 })
   const thrusters = useRef(initialThrusters())
   const jumpQueued = useRef(false)
@@ -56,6 +63,21 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     const offTouch = useTouchInput.subscribe((s, prev) => { if (s.jump !== prev.jump) queue(s.jump) })
     return () => { offKeys(); offTouch() }
   }, [subscribeKeys])
+
+  // Tricks: hold Space in the air and tap an arrow, or flick on the Hop button.
+  useEffect(() => {
+    const onArrow = (kind: TrickKind) => (pressed: boolean) => {
+      if (pressed && getKeys().jump) trickQueued.current = kind
+    }
+    const offs = [
+      subscribeKeys((s) => s.left, onArrow('rollLeft')),
+      subscribeKeys((s) => s.right, onArrow('rollRight')),
+      subscribeKeys((s) => s.forward, onArrow('frontFlip')),
+      subscribeKeys((s) => s.back, onArrow('backFlip')),
+      useTouchInput.subscribe((s, prev) => { if (s.trick && s.trick !== prev.trick) trickQueued.current = s.trick.kind }),
+    ]
+    return () => offs.forEach((off) => off())
+  }, [subscribeKeys, getKeys])
   const resetId = useGame((s) => s.resetId)
 
   useEffect(() => {
@@ -66,6 +88,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     b.setLinvel({ x: 0, y: 0, z: 0 }, true)
     b.setAngvel({ x: 0, y: 0, z: 0 }, true)
     thrusters.current = initialThrusters()
+    tricks.current = initialTricks()
   }, [resetId])
 
   // Driving runs once per physics step, so it behaves the same at any frame rate.
@@ -82,7 +105,10 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     // Ground check: short ray down from the body center.
     const ray = new rapier.Ray(pos, { x: 0, y: -1, z: 0 })
     const hit = world.castRay(ray, HALF_HEIGHT + 0.2, true, rapier.QueryFilterFlags.EXCLUDE_SENSORS, undefined, undefined, b)
-    const onGround = hit !== null
+    // Just after a hop the ray still reaches the ground. Ignore it briefly,
+    // so the car does not count as landed while it lifts off.
+    hopGrace.current = Math.max(0, hopGrace.current - dt)
+    const onGround = hit !== null && hopGrace.current === 0
 
     const r = b.rotation()
     quat.set(r.x, r.y, r.z, r.w)
@@ -113,6 +139,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       if (hop.hopped) {
         vy = Math.max(vy, 0) + THRUSTER.hopVelocity
         airborne = hopped = true
+        hopGrace.current = HOP_GRACE
       }
     }
     const t = updateThrusters(
@@ -131,6 +158,28 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     if (t.boosting) fwd += DRIVE.boostAccel * dt
     // Hover cancels the gravity of this step, then eases toward a slow climb.
     if (t.hovering) vy = THREE.MathUtils.damp(vy, DRIVE.hoverLift, 5, dt) + GRAVITY * dt
+
+    // Tricks spin the model only. Landing mid-spin is a crash and kills most of the speed.
+    if (trickQueued.current) {
+      tricks.current = startTrick(tricks.current, trickQueued.current, airborne)
+      trickQueued.current = null
+    }
+    tricks.current = updateTricks(tricks.current, dt)
+    if (wasAirborne.current && !airborne) {
+      const landed = land(tricks.current)
+      tricks.current = landed.state
+      if (landed.result?.kind === 'crash') {
+        fwd *= 0.2
+        lat *= 0.2
+        game.showToast('Bad landing!', 'bad')
+      } else if (landed.result) {
+        const { tricks: done, points } = landed.result
+        const combo = done.length > 1 ? ` x${done.length} combo` : ''
+        game.addScore(points)
+        game.showToast(`${done.map((t) => TRICK_NAMES[t]).join(' + ')}${combo}  +${points}`, 'good')
+      }
+    }
+    wasAirborne.current = airborne
 
     const turn = onGround
       ? steer * DRIVE.steer * THREE.MathUtils.clamp(fwd / 6, -1, 1) / (1 + Math.abs(fwd) / 45)
@@ -170,6 +219,9 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       g.rotation.x = THREE.MathUtils.damp(g.rotation.x, pitch, 6, dt)
       g.rotation.z = THREE.MathUtils.damp(g.rotation.z, -s.turn * Math.min(Math.abs(s.fwd) / 60, 1) * 0.06, 6, dt)
     }
+    const spin = trickRotation(tricks.current)
+    trickGroup.current?.rotation.set(spin.pitch, 0, spin.roll)
+
     // A hop fires a short burst; hover and boost hold a steady flame.
     fx.current.hover = s.hopBurst ? 1.6 : THREE.MathUtils.damp(fx.current.hover, s.hovering ? 1 : 0, 12, dt)
     fx.current.boost = THREE.MathUtils.damp(fx.current.boost, s.boosting ? 1 : 0, 12, dt)
@@ -187,6 +239,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         boosting: s.boosting,
         altitude: Math.max(0, pos.y - HALF_HEIGHT),
         launch: launch.current,
+        trick: tricks.current.active,
       })
     }
 
@@ -208,7 +261,9 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     >
       <RoundCuboidCollider args={[0.75, 0.25, 1.95, 0.2]} friction={0} restitution={0} density={300} />
       <group ref={visual}>
-        <CarModel fx={fx} />
+        <group ref={trickGroup}>
+          <CarModel fx={fx} />
+        </group>
       </group>
     </RigidBody>
   )

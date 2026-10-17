@@ -1,20 +1,36 @@
 import nipplejs from 'nipplejs'
 import { useEffect, useRef, type PointerEvent } from 'react'
+import { detectFlick, flickToTrick, type FlickDir, type FlickPoint } from './flick'
 import { useGame } from './store'
 import { useTouchInput } from './touchInput'
 
 // Hold-to-press button: stays down while the finger is on it, even if it slides off.
-function HoldButton({ label, className, onChange }: { label: string; className: string; onChange: (down: boolean) => void }) {
+// With onFlick, a quick swipe while holding it reports a direction.
+function HoldButton({ label, className, onChange, onFlick }: {
+  label: string
+  className: string
+  onChange: (down: boolean) => void
+  onFlick?: (dir: FlickDir) => void
+}) {
+  const anchor = useRef<FlickPoint | null>(null)
   const press = (down: boolean) => (e: PointerEvent<HTMLButtonElement>) => {
     e.preventDefault()
     if (down) e.currentTarget.setPointerCapture(e.pointerId)
+    anchor.current = down ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null
     onChange(down)
+  }
+  const move = (e: PointerEvent<HTMLButtonElement>) => {
+    if (!onFlick || !anchor.current) return
+    const r = detectFlick(anchor.current, { x: e.clientX, y: e.clientY, t: e.timeStamp })
+    anchor.current = r.anchor
+    if (r.dir) onFlick(r.dir)
   }
   return (
     <button
       className={`touch-btn ${className}`}
       aria-label={label}
       onPointerDown={press(true)}
+      onPointerMove={move}
       onPointerUp={press(false)}
       onPointerCancel={press(false)}
       onContextMenu={(e) => e.preventDefault()}
@@ -26,7 +42,7 @@ function HoldButton({ label, className, onChange }: { label: string; className: 
 
 export function TouchControls() {
   const zone = useRef<HTMLDivElement>(null)
-  const { setStick, setJump, setBoost } = useTouchInput()
+  const { setStick, setJump, setBoost, requestTrick } = useTouchInput()
   const reset = useGame((s) => s.reset)
 
   useEffect(() => {
@@ -62,7 +78,7 @@ export function TouchControls() {
       <div ref={zone} className="joystick-zone" data-testid="joystick-zone" />
       <div className="touch-buttons">
         <HoldButton label="Boost" className="boost" onChange={setBoost} />
-        <HoldButton label="Hop" className="hop" onChange={setJump} />
+        <HoldButton label="Hop" className="hop" onChange={setJump} onFlick={(dir) => requestTrick(flickToTrick(dir))} />
       </div>
       <button className="touch-reset" aria-label="Reset" onClick={reset}>↺</button>
     </div>

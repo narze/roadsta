@@ -24,7 +24,12 @@ export function Hud() {
         <div className="label">Rings</div>
         <div className="big">{g.rings} / {RING_COUNT}</div>
         <div className="small">{g.courseTime !== null ? `Course done in ${g.courseTime.toFixed(2)} s` : 'Fly through all rings'}</div>
+        <div className="small">Trick score <b data-testid="score">{g.score}</b></div>
       </div>
+
+      {g.toast && (
+        <div key={g.toast.id} className={`toast ${g.toast.tone}`} data-testid="toast">{g.toast.text}</div>
+      )}
 
       <div className="panel top-right">
         <div className="label">0-60 mph</div>
@@ -53,6 +58,7 @@ export function Hud() {
               <ul>
                 <li><b>Left thumb</b> - joystick: up to drive, down to brake, sideways to steer</li>
                 <li><b>Hop</b> - hold it to hover for a moment</li>
+                <li><b>Tricks</b> - hold Hop, then flick: ←/→ barrel roll, ↑ front flip, ↓ backflip</li>
                 <li><b>Boost</b> - 0-60 mph in under 1 s</li>
                 <li><b>↺</b> - reset to the start line</li>
               </ul>
@@ -60,11 +66,12 @@ export function Hud() {
               <ul>
                 <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</li>
                 <li><kbd>Space</kbd> hop - hold it to hover for a moment</li>
+              <li>In the air, hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd> barrel roll, <kbd>↑</kbd> front flip, <kbd>↓</kbd> backflip</li>
                 <li><kbd>Shift</kbd> thruster boost - 0-60 mph in under 1 s</li>
                 <li><kbd>Enter</kbd> reset to the start line</li>
               </ul>
             )}
-            <p className="note">Thruster gas is limited. It refills when you drive on the road.</p>
+            <p className="note">Thruster gas is limited. It refills when you drive on the road. Finish each spin before you land, or you lose your speed.</p>
             {touch && <p className="note rotate-hint">Turn your phone sideways for the best view.</p>}
             <button onClick={start} disabled={!g.ready}>{g.ready ? 'Start test drive' : 'Loading...'}</button>
           </div>

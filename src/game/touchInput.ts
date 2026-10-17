@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { TrickKind } from './tricks'
 
 const DEAD_ZONE = 0.15
 
@@ -21,9 +22,12 @@ type TouchInput = {
   steer: number
   jump: boolean
   boost: boolean
+  // Latest flick on the Hop button. The id changes on every flick.
+  trick: { kind: TrickKind; id: number } | null
   setStick: (v: { x: number; y: number }) => void
   setJump: (down: boolean) => void
   setBoost: (down: boolean) => void
+  requestTrick: (kind: TrickKind) => void
 }
 
 export const useTouchInput = create<TouchInput>((set) => ({
@@ -31,7 +35,9 @@ export const useTouchInput = create<TouchInput>((set) => ({
   steer: 0,
   jump: false,
   boost: false,
+  trick: null,
   setStick: (v) => set(stickToDrive(v)),
   setJump: (jump) => set({ jump }),
   setBoost: (boost) => set({ boost }),
+  requestTrick: (kind) => set((s) => ({ trick: { kind, id: (s.trick?.id ?? 0) + 1 } })),
 }))

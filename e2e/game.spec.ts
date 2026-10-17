@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-type Hud = { mph: number; gas: number; airborne: boolean; rings: number }
+type Hud = { mph: number; gas: number; airborne: boolean; rings: number; trick: string | null; score: number }
 const hud = (page: Page) => page.evaluate(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState())
 
 async function start(page: Page) {
@@ -25,4 +25,15 @@ test('space makes the car hop and uses thruster gas', async ({ page }) => {
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
   expect((await hud(page)).gas).toBeLessThan(100)
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 15_000 }).toBe(false)
+})
+
+test('holding Space and tapping an arrow in the air does a barrel roll', async ({ page }) => {
+  await start(page)
+  await page.keyboard.down('Space')
+  await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('rollLeft')
+  await expect(page.getByTestId('toast')).toContainText('Barrel roll left', { timeout: 20_000 })
+  await page.keyboard.up('Space')
+  expect((await hud(page)).score).toBeGreaterThan(0)
 })
