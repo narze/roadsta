@@ -1,32 +1,29 @@
-# React + TypeScript + Vite
+# Roadster 2026 - Test Drive
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser test drive of the 2026 Tesla Roadster with the SpaceX cold-gas thruster pack.
+The car does not fly. It launches very fast, hops, and hovers for a short time.
 
-Currently, two official plugins are available:
+Stack: Vite, React, three.js, React Three Fiber, drei, Rapier physics, postprocessing, zustand.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+pnpm install
+pnpm dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Controls
+
+| Key | Action |
+|---|---|
+| Arrow keys or WASD | Drive |
+| Space | Hop - hold it to hover for a moment |
+| Shift | Thruster boost (0-60 mph in under 1 s) |
+| Enter or Backspace | Reset to the start line |
+
+## Test
+
+```sh
+pnpm test   # unit tests (thrusters, 0-60 timer)
+pnpm e2e    # Playwright tests in a real browser
+```
