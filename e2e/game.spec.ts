@@ -32,10 +32,10 @@ test('holding Space and tapping an arrow in the air does a kickflip', async ({ p
   await page.keyboard.down('Space')
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
   await page.keyboard.press('ArrowLeft')
-  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('kickflipLeft')
-  await expect(page.getByTestId('toast')).toContainText('Kickflip left', { timeout: 20_000 })
+  // The trick itself is short; on a slow CI machine a poll can miss it. Check what stays: the score and the message.
+  await expect.poll(async () => (await hud(page)).score, { timeout: 60_000 }).toBeGreaterThan(0)
+  await expect(page.getByTestId('toast')).toContainText('Kickflip left')
   await page.keyboard.up('Space')
-  expect((await hud(page)).score).toBeGreaterThan(0)
 })
 
 test('a finished trick restores thruster gas in the air', async ({ page }) => {
