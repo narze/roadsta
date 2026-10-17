@@ -1,8 +1,9 @@
 import { create } from 'zustand'
+import { RINGS } from './course'
 import { initialLaunchTimer, type LaunchTimer } from './launchTimer'
 import type { TrickKind } from './tricks'
 
-export const RING_COUNT = 8
+export const RING_COUNT = RINGS.length
 
 export type Toast = { id: number; text: string; tone: 'good' | 'bad' }
 

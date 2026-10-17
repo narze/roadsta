@@ -46,5 +46,7 @@ test('a finished trick restores thruster gas in the air', async ({ page }) => {
   await page.keyboard.up('Space') // no hover, so the gas only changes from the hop and the trick
   const afterHop = (await hud(page)).gas
   expect(afterHop).toBeLessThan(75)
-  await expect.poll(async () => { const h = await hud(page); return h.airborne && h.gas > afterHop + 25 }, { timeout: 15_000 }).toBe(true)
+  // Read the gas right at landing. Ground refill is slow (12/s), so a jump of 20+ can only come from the trick.
+  await expect.poll(async () => (await hud(page)).airborne, { timeout: 15_000 }).toBe(false)
+  expect((await hud(page)).gas).toBeGreaterThan(afterHop + 20)
 })

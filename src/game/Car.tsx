@@ -4,11 +4,12 @@ import { RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type R
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { CarModel, type ThrusterFx } from './CarModel'
+import { CAR_WIDTH } from './course'
 import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
-import { initialThrusters, rewardTrick, THRUSTER, tryHop, updateThrusters } from './thrusters'
+import { boostAcceleration, initialThrusters, rewardTrick, THRUSTER, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
 import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
 
@@ -20,7 +21,6 @@ const HOP_GRACE = 0.15 // seconds
 const DRIVE = {
   accel: 16, // m/s^2 at rest, about 0-60 mph in 1.9 s
   topSpeed: 110, // m/s, about 250 mph
-  boostAccel: 26, // extra m/s^2 from the rear thrusters, 0-60 under 1 s
   brake: 30,
   reverseAccel: 8,
   reverseMax: 12,
@@ -155,7 +155,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       else fwd *= 1 - DRIVE.rollDrag * dt
       lat *= Math.exp(-DRIVE.grip * dt)
     }
-    if (t.boosting) fwd += DRIVE.boostAccel * dt
+    if (t.boosting) fwd += boostAcceleration(fwd) * dt
     // Hover cancels the gravity of this step, then eases toward a slow climb.
     if (t.hovering) vy = THREE.MathUtils.damp(vy, DRIVE.hoverLift, 5, dt) + GRAVITY * dt
 
@@ -265,7 +265,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       canSleep={false}
       ccd
     >
-      <RoundCuboidCollider args={[0.82, 0.25, 2.15, 0.2]} friction={0} restitution={0} density={300} />
+      <RoundCuboidCollider args={[CAR_WIDTH / 2 - 0.2, 0.25, 2.15, 0.2]} friction={0} restitution={0} density={300} />
       <group ref={visual}>
         <group ref={trickGroup}>
           <CarModel fx={fx} />

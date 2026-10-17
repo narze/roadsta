@@ -31,8 +31,11 @@ function SkyDome() {
       }),
     [],
   )
+  // Keep the dome centered on the camera, so the far end of the track stays inside it.
+  const dome = useRef<THREE.Mesh>(null)
+  useFrame(({ camera }) => dome.current?.position.copy(camera.position))
   return (
-    <mesh material={material} renderOrder={-1} frustumCulled={false}>
+    <mesh ref={dome} material={material} renderOrder={-1} frustumCulled={false}>
       <sphereGeometry args={[1500, 32, 16]} />
     </mesh>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { THRUSTER, initialThrusters, rewardTrick, tryHop, updateThrusters } from './thrusters'
+import { THRUSTER, boostAcceleration, initialThrusters, rewardTrick, tryHop, updateThrusters } from './thrusters'
 
 const idle = { hover: false, boost: false, onGround: true }
 
@@ -75,5 +75,24 @@ describe('rewardTrick', () => {
 
   it('does not fill above capacity', () => {
     expect(rewardTrick({ gas: 90 }).gas).toBe(THRUSTER.capacity)
+  })
+})
+
+describe('boostAcceleration', () => {
+  it('is full from a standstill', () => {
+    expect(boostAcceleration(0)).toBe(THRUSTER.boostAccel)
+  })
+
+  it('fades to zero at the boost top speed and never goes negative', () => {
+    expect(boostAcceleration(THRUSTER.boostTopSpeed)).toBe(0)
+    expect(boostAcceleration(THRUSTER.boostTopSpeed * 2)).toBe(0)
+  })
+})
+
+describe('boost on an empty tank', () => {
+  it('does not refill while the boost key is held, so boost cannot sputter on forever', () => {
+    const r = updateThrusters({ gas: 0 }, { hover: false, boost: true, onGround: true }, 1)
+    expect(r.boosting).toBe(false)
+    expect(r.state.gas).toBe(0)
   })
 })
