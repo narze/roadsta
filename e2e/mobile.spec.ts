@@ -51,8 +51,10 @@ test('flicking up on the hop button in the air does a front flip', async ({ page
   const c = await center(page.getByRole('button', { name: 'Hop' }))
   await page.mouse.move(c.x, c.y)
   await page.mouse.down()
-  await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
-  await page.mouse.move(c.x, c.y - 70, { steps: 2 })
+  // Flick right away: the game runs a queued hop before a queued trick in the same physics step.
+  // One move event: on a slow CI machine, separate move events can arrive more than the flick
+  // window apart and read as a slow drag. The "hold still, then flick" case is a unit test.
+  await page.mouse.move(c.x, c.y - 70)
   // The trick itself is short; on a slow CI machine a poll can miss it. Check what stays: the score and the message.
   await expect.poll(async () => (await hud(page)).score, { timeout: 60_000 }).toBeGreaterThan(0)
   await expect(page.getByTestId('toast')).toContainText('Front flip')
