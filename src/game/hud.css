@@ -1,0 +1,28 @@
+.hud { position: fixed; inset: 0; pointer-events: none; user-select: none; }
+.panel { position: absolute; padding: 12px 16px; border-radius: 12px; background: rgba(10, 12, 18, 0.55); backdrop-filter: blur(6px); min-width: 170px; }
+.top-left { top: 16px; left: 16px; }
+.top-right { top: 16px; right: 16px; }
+.bottom-left { bottom: 16px; left: 16px; }
+.bottom-right { bottom: 16px; right: 16px; min-width: 240px; }
+.label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
+.big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.small { font-size: 12px; opacity: 0.8; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.row { display: flex; justify-content: space-between; gap: 16px; font-variant-numeric: tabular-nums; }
+.speed { font-size: 56px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.speed small { font-size: 16px; font-weight: 600; margin-left: 6px; opacity: 0.7; }
+.status { font-weight: 800; letter-spacing: 0.1em; margin-bottom: 6px; }
+.status.hover { color: #7fd8ff; }
+.status.boost { color: #ffb347; }
+.status.airborne { color: #c9f; }
+.gas { margin-top: 6px; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.gas .fill { height: 100%; background: linear-gradient(90deg, #4fc3ff, #b8ecff); }
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(5, 7, 12, 0.45); pointer-events: auto; }
+.card { width: min(460px, calc(100vw - 32px)); padding: 28px 32px; border-radius: 16px; background: rgba(12, 14, 20, 0.85); }
+.card h1 { margin: 0; font-size: 34px; letter-spacing: 0.04em; }
+.card .sub { margin: 4px 0 16px; opacity: 0.75; }
+.card ul { margin: 0; padding-left: 18px; line-height: 2; }
+.card .note { font-size: 13px; opacity: 0.7; }
+kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 5px; background: #2a2f3a; border-bottom: 2px solid #11141a; font: 600 12px system-ui; text-align: center; }
+.card button { width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 10px; background: #e31937; color: #fff; font: 700 16px system-ui; cursor: pointer; }
+.card button:hover:enabled { background: #ff2a49; }
+.card button:disabled { background: #444a55; cursor: wait; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
+import { initialLaunchTimer, updateLaunchTimer, type LaunchTimer } from './launchTimer'
 
 describe('launch timer (0-60 mph)', () => {
   it('arms when the car stands still', () => {
@@ -24,7 +24,7 @@ describe('launch timer (0-60 mph)', () => {
   })
 
   it('keeps the best time across runs', () => {
-    let t = { phase: 'armed' as const, elapsed: 0, last: 2, best: 1.5 }
+    let t: LaunchTimer = { phase: 'armed', elapsed: 0, last: 2, best: 1.5 }
     t = updateLaunchTimer(t, 30, 1)
     t = updateLaunchTimer(t, 65, 1)
     expect(t.last).toBeCloseTo(2)
@@ -32,13 +32,13 @@ describe('launch timer (0-60 mph)', () => {
   })
 
   it('re-arms after the car stops again', () => {
-    let t = { phase: 'done' as const, elapsed: 1, last: 1, best: 1 }
+    let t: LaunchTimer = { phase: 'done', elapsed: 1, last: 1, best: 1 }
     t = updateLaunchTimer(t, 0.2, 0.016)
     expect(t.phase).toBe('armed')
   })
 
   it('cancels a run when the car stops before 60 mph', () => {
-    let t = { phase: 'running' as const, elapsed: 1, last: null, best: null }
+    let t: LaunchTimer = { phase: 'running', elapsed: 1, last: null, best: null }
     t = updateLaunchTimer(t, 0.2, 0.016)
     expect(t.phase).toBe('armed')
     expect(t.last).toBeNull()

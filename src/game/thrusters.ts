@@ -3,7 +3,7 @@
 export const THRUSTER = {
   capacity: 100,
   hopCost: 30,
-  hopVelocity: 9, // m/s added upward on a hop
+  hopVelocity: 11, // m/s added upward on a hop
   hoverCostPerSec: 45,
   boostCostPerSec: 35,
   refillPerSec: 12,
