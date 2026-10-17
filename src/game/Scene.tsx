@@ -35,7 +35,7 @@ function SkyDome() {
   const dome = useRef<THREE.Mesh>(null)
   useFrame(({ camera }) => dome.current?.position.copy(camera.position))
   return (
-    <mesh ref={dome} material={material} renderOrder={-1} frustumCulled={false}>
+    <mesh ref={dome} material={material} renderOrder={-3} frustumCulled={false}>
       <sphereGeometry args={[1500, 32, 16]} />
     </mesh>
   )
