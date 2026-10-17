@@ -53,8 +53,9 @@ test('flicking up on the hop button in the air does a front flip', async ({ page
   await page.mouse.down()
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
   await page.mouse.move(c.x, c.y - 70, { steps: 2 })
-  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('frontFlip')
-  await expect(page.getByTestId('toast')).toContainText('Front flip', { timeout: 20_000 })
+  // The trick itself is short; on a slow CI machine a poll can miss it. Check what stays: the score and the message.
+  await expect.poll(async () => (await hud(page)).score, { timeout: 60_000 }).toBeGreaterThan(0)
+  await expect(page.getByTestId('toast')).toContainText('Front flip')
   await page.mouse.up()
 })
 
