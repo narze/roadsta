@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { TRICK, initialTricks, land, startTrick, trickRotation, updateTricks } from './tricks'
 
-const spinTo = (progress: number) => updateTricks(startTrick(initialTricks(), 'rollLeft', true), TRICK.duration * progress)
+const spinTo = (progress: number) => updateTricks(startTrick(initialTricks(), 'kickflipLeft', true), TRICK.duration * progress)
 
 describe('startTrick', () => {
   it('starts a trick in the air', () => {
@@ -13,8 +13,8 @@ describe('startTrick', () => {
   })
 
   it('does not interrupt a trick that is in progress', () => {
-    const s = startTrick(startTrick(initialTricks(), 'rollLeft', true), 'backFlip', true)
-    expect(s.active).toBe('rollLeft')
+    const s = startTrick(startTrick(initialTricks(), 'kickflipLeft', true), 'backFlip', true)
+    expect(s.active).toBe('kickflipLeft')
   })
 })
 
@@ -22,20 +22,20 @@ describe('updateTricks', () => {
   it('adds a finished trick to the combo', () => {
     const s = spinTo(1.01)
     expect(s.active).toBeNull()
-    expect(s.combo).toEqual(['rollLeft'])
+    expect(s.combo).toEqual(['kickflipLeft'])
   })
 
   it('allows a second trick after the first one ends', () => {
     let s = spinTo(1.01)
     s = updateTricks(startTrick(s, 'backFlip', true), TRICK.duration * 1.01)
-    expect(s.combo).toEqual(['rollLeft', 'backFlip'])
+    expect(s.combo).toEqual(['kickflipLeft', 'backFlip'])
   })
 })
 
 describe('land', () => {
   it('scores a clean landing after a full trick', () => {
     const r = land(spinTo(1.01))
-    expect(r.result).toEqual({ kind: 'clean', tricks: ['rollLeft'], points: TRICK.points.rollLeft })
+    expect(r.result).toEqual({ kind: 'clean', tricks: ['kickflipLeft'], points: TRICK.points.kickflipLeft })
     expect(r.state).toEqual(initialTricks())
   })
 
@@ -52,7 +52,7 @@ describe('land', () => {
     let s = spinTo(1.01)
     s = updateTricks(startTrick(s, 'frontFlip', true), TRICK.duration * 1.01)
     const r = land(s)
-    expect(r.result).toMatchObject({ kind: 'clean', points: (TRICK.points.rollLeft + TRICK.points.frontFlip) * 2 })
+    expect(r.result).toMatchObject({ kind: 'clean', points: (TRICK.points.kickflipLeft + TRICK.points.frontFlip) * 2 })
   })
 
   it('returns no result when there was no trick', () => {
@@ -65,10 +65,10 @@ describe('trickRotation', () => {
     expect(trickRotation(initialTricks())).toEqual({ roll: 0, pitch: 0 })
   })
 
-  it('rolls left as a negative roll and right as a positive roll', () => {
-    const half = (k: 'rollLeft' | 'rollRight') => updateTricks(startTrick(initialTricks(), k, true), TRICK.duration / 2)
-    expect(trickRotation(half('rollLeft')).roll).toBeCloseTo(-Math.PI)
-    expect(trickRotation(half('rollRight')).roll).toBeCloseTo(Math.PI)
+  it('kickflips left as a negative roll and right as a positive roll', () => {
+    const half = (k: 'kickflipLeft' | 'kickflipRight') => updateTricks(startTrick(initialTricks(), k, true), TRICK.duration / 2)
+    expect(trickRotation(half('kickflipLeft')).roll).toBeCloseTo(-Math.PI)
+    expect(trickRotation(half('kickflipRight')).roll).toBeCloseTo(Math.PI)
   })
 
   it('front flip pitches the nose down (positive), back flip pitches it up (negative)', () => {

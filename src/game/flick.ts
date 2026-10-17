@@ -15,5 +15,5 @@ export function detectFlick(anchor: FlickPoint, p: FlickPoint): { dir: FlickDir 
   return { dir, anchor: p }
 }
 
-const TRICK_FOR: Record<FlickDir, TrickKind> = { left: 'rollLeft', right: 'rollRight', up: 'frontFlip', down: 'backFlip' }
+const TRICK_FOR: Record<FlickDir, TrickKind> = { left: 'kickflipLeft', right: 'kickflipRight', up: 'frontFlip', down: 'backFlip' }
 export const flickToTrick = (dir: FlickDir) => TRICK_FOR[dir]

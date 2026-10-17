@@ -20,11 +20,11 @@ pnpm dev
 | Space | Hop - hold it to hover for a moment |
 | Shift | Thruster boost (0-60 mph in under 1 s) |
 | Enter or Backspace | Reset to the start line |
-| In the air: hold Space + ← / → | Barrel roll left / right |
+| In the air: hold Space + ← / → | Kickflip left / right |
 | In the air: hold Space + ↑ / ↓ | Front flip / backflip |
 
 On touch screens: a joystick on the left drives the car. Tap **Hop** to hop and hold it to hover.
-While you hold Hop in the air, flick your finger left/right for a barrel roll, or up/down for a front flip or backflip.
+While you hold Hop in the air, flick your finger left/right for a kickflip, or up/down for a front flip or backflip.
 
 Finish each spin before you land. A clean landing scores points (combos multiply them).
 Landing mid-spin is a bad landing and costs most of your speed.

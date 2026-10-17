@@ -37,8 +37,8 @@ describe('detectFlick', () => {
 
 describe('flickToTrick', () => {
   it('maps directions to tricks', () => {
-    expect(flickToTrick('left')).toBe('rollLeft')
-    expect(flickToTrick('right')).toBe('rollRight')
+    expect(flickToTrick('left')).toBe('kickflipLeft')
+    expect(flickToTrick('right')).toBe('kickflipRight')
     expect(flickToTrick('up')).toBe('frontFlip')
     expect(flickToTrick('down')).toBe('backFlip')
   })

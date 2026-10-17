@@ -70,8 +70,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       if (pressed && getKeys().jump) trickQueued.current = kind
     }
     const offs = [
-      subscribeKeys((s) => s.left, onArrow('rollLeft')),
-      subscribeKeys((s) => s.right, onArrow('rollRight')),
+      subscribeKeys((s) => s.left, onArrow('kickflipLeft')),
+      subscribeKeys((s) => s.right, onArrow('kickflipRight')),
       subscribeKeys((s) => s.forward, onArrow('frontFlip')),
       subscribeKeys((s) => s.back, onArrow('backFlip')),
       useTouchInput.subscribe((s, prev) => { if (s.trick && s.trick !== prev.trick) trickQueued.current = s.trick.kind }),
@@ -259,7 +259,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       canSleep={false}
       ccd
     >
-      <RoundCuboidCollider args={[0.75, 0.25, 1.95, 0.2]} friction={0} restitution={0} density={300} />
+      <RoundCuboidCollider args={[0.82, 0.25, 2.15, 0.2]} friction={0} restitution={0} density={300} />
       <group ref={visual}>
         <group ref={trickGroup}>
           <CarModel fx={fx} />

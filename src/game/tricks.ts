@@ -1,15 +1,15 @@
-// Air tricks: barrel rolls and flips. They spin the car model, not the physics body.
-export type TrickKind = 'rollLeft' | 'rollRight' | 'frontFlip' | 'backFlip'
+// Air tricks: kickflips and flips. They spin the car model, not the physics body.
+export type TrickKind = 'kickflipLeft' | 'kickflipRight' | 'frontFlip' | 'backFlip'
 
 export const TRICK = {
   duration: 0.7, // seconds for one full spin
   cleanFrom: 0.8, // landing after this much of a spin still counts as clean
-  points: { rollLeft: 100, rollRight: 100, frontFlip: 150, backFlip: 150 } satisfies Record<TrickKind, number>,
+  points: { kickflipLeft: 100, kickflipRight: 100, frontFlip: 150, backFlip: 150 } satisfies Record<TrickKind, number>,
 }
 
 export const TRICK_NAMES: Record<TrickKind, string> = {
-  rollLeft: 'Barrel roll left',
-  rollRight: 'Barrel roll right',
+  kickflipLeft: 'Kickflip left',
+  kickflipRight: 'Kickflip right',
   frontFlip: 'Front flip',
   backFlip: 'Backflip',
 }
@@ -48,8 +48,8 @@ export function trickRotation(s: TrickState) {
   if (!s.active) return { roll: 0, pitch: 0 }
   const a = ease(Math.min(1, s.progress)) * Math.PI * 2
   switch (s.active) {
-    case 'rollLeft': return { roll: -a, pitch: 0 }
-    case 'rollRight': return { roll: a, pitch: 0 }
+    case 'kickflipLeft': return { roll: -a, pitch: 0 }
+    case 'kickflipRight': return { roll: a, pitch: 0 }
     case 'frontFlip': return { roll: 0, pitch: a }
     case 'backFlip': return { roll: 0, pitch: -a }
   }

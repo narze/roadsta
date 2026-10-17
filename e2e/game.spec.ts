@@ -27,13 +27,13 @@ test('space makes the car hop and uses thruster gas', async ({ page }) => {
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 15_000 }).toBe(false)
 })
 
-test('holding Space and tapping an arrow in the air does a barrel roll', async ({ page }) => {
+test('holding Space and tapping an arrow in the air does a kickflip', async ({ page }) => {
   await start(page)
   await page.keyboard.down('Space')
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
   await page.keyboard.press('ArrowLeft')
-  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('rollLeft')
-  await expect(page.getByTestId('toast')).toContainText('Barrel roll left', { timeout: 20_000 })
+  await expect.poll(async () => (await hud(page)).trick, { timeout: 10_000 }).toBe('kickflipLeft')
+  await expect(page.getByTestId('toast')).toContainText('Kickflip left', { timeout: 20_000 })
   await page.keyboard.up('Space')
   expect((await hud(page)).score).toBeGreaterThan(0)
 })

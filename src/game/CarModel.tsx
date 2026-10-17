@@ -5,21 +5,59 @@ import * as THREE from 'three'
 // Live thruster levels (0-1), written by the car physics every frame.
 export type ThrusterFx = { hover: number; boost: number }
 
-// Side profile points: [z (forward), y (up)]
-const BODY: [number, number][] = [
-  [-2.1, -0.25], [-2.15, 0.18], [-1.95, 0.3], [-1.3, 0.34], [0.9, 0.3],
-  [1.9, 0.1], [2.15, -0.08], [2.05, -0.25],
-]
-const CABIN: [number, number][] = [[-1.25, 0.33], [-0.55, 0.7], [0.15, 0.7], [0.95, 0.3]]
+type P = [number, number] // side profile point: [z (forward), y (up)]
 
-function profileGeometry(points: [number, number][], width: number, bevel: number) {
+const BOTTOM = -0.27
+const WHEEL_R = 0.36
+const WHEEL_Y = -0.09
+const ARCH_R = 0.42
+const FRONT_AXLE = 1.42
+const REAR_AXLE = -1.38
+const TRACK = 0.84 // wheel center distance from the middle
+
+// Low center tub: long falling hood that ends in a sharp wedge nose.
+const TUB_TOP: P[] = [
+  [-2.3, -0.12], [-2.33, 0.24], [-2.1, 0.36], [-1.4, 0.4], [0.6, 0.37], [1.5, 0.24], [2.25, 0.0], [2.38, -0.1],
+]
+// Side shells: fender line rises over each wheel, higher than the hood.
+const SHELL_TOP: P[] = [
+  [-2.3, -0.12], [-2.33, 0.24], [-2.1, 0.38], [-1.38, 0.44], [-0.6, 0.41], [0.6, 0.38], [1.42, 0.4], [2.0, 0.2], [2.38, -0.1],
+]
+const NOSE_BOTTOM: P[] = [[2.25, -0.22], [1.95, BOTTOM]]
+const TAIL_BOTTOM: P[] = [[-1.95, BOTTOM], [-2.25, -0.24]]
+const CANOPY: P[] = [[-1.7, 0.38], [-1.0, 0.66], [-0.35, 0.8], [0.15, 0.79], [0.55, 0.6], [0.85, 0.36]]
+
+// Points over a wheel arch, front to rear, where the arch meets the bottom line.
+function arch(zc: number): P[] {
+  const start = Math.atan2(BOTTOM - WHEEL_Y, Math.sqrt(ARCH_R ** 2 - (BOTTOM - WHEEL_Y) ** 2))
+  const pts: P[] = []
+  for (let i = 0; i <= 16; i++) {
+    const a = start + (i / 16) * (Math.PI - 2 * start)
+    pts.push([zc + ARCH_R * Math.cos(a), WHEEL_Y + ARCH_R * Math.sin(a)])
+  }
+  return pts
+}
+
+// Narrow the top of a shape, so the canopy reads as a rounded glass bubble.
+function taper(geo: THREE.BufferGeometry, fromY: number, toY: number, topScale: number) {
+  const pos = geo.attributes.position
+  for (let i = 0; i < pos.count; i++) {
+    const t = THREE.MathUtils.clamp((pos.getY(i) - fromY) / (toY - fromY), 0, 1)
+    pos.setX(i, pos.getX(i) * THREE.MathUtils.lerp(1, topScale, t))
+  }
+  geo.computeVertexNormals()
+  return geo
+}
+
+function profileGeometry(points: P[], width: number, bevel: number) {
   const shape = new THREE.Shape(points.map(([z, y]) => new THREE.Vector2(z, y)))
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: width,
     bevelEnabled: true,
     bevelSize: bevel,
     bevelThickness: bevel,
-    bevelSegments: 4,
+    bevelSegments: 3,
+    curveSegments: 4,
   })
   geo.translate(0, 0, -width / 2)
   geo.rotateY(-Math.PI / 2) // shape x -> world z
@@ -28,12 +66,12 @@ function profileGeometry(points: [number, number][], width: number, bevel: numbe
 }
 
 const WHEELS: [number, number, number][] = [
-  [0.86, -0.12, 1.35], [-0.86, -0.12, 1.35], [0.86, -0.12, -1.35], [-0.86, -0.12, -1.35],
+  [TRACK, WHEEL_Y, FRONT_AXLE], [-TRACK, WHEEL_Y, FRONT_AXLE], [TRACK, WHEEL_Y, REAR_AXLE], [-TRACK, WHEEL_Y, REAR_AXLE],
 ]
 const HOVER_NOZZLES: [number, number, number][] = [
-  [0.6, -0.3, 1.5], [-0.6, -0.3, 1.5], [0.6, -0.3, -1.5], [-0.6, -0.3, -1.5],
+  [0.45, -0.3, 1.75], [-0.45, -0.3, 1.75], [0.45, -0.3, -1.8], [-0.45, -0.3, -1.8],
 ]
-const BOOST_NOZZLES: [number, number, number][] = [[0.35, 0.05, -2.2], [-0.35, 0.05, -2.2]]
+const BOOST_NOZZLES: [number, number, number][] = [[0.32, -0.13, -2.43], [-0.32, -0.13, -2.43]]
 
 function Flame({ position, dir, fx, kind }: {
   position: [number, number, number]
@@ -62,45 +100,99 @@ function Flame({ position, dir, fx, kind }: {
   )
 }
 
+// Large dark wheel with a six-spoke turbine rim.
+function Wheel({ position }: { position: [number, number, number] }) {
+  const side = Math.sign(position[0])
+  return (
+    <group position={position}>
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[WHEEL_R, WHEEL_R, 0.3, 32]} />
+        <meshStandardMaterial color="#111214" roughness={0.85} />
+      </mesh>
+      <group position={[side * 0.152, 0, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.27, 0.27, 0.01, 32]} />
+          <meshStandardMaterial color="#8e949c" metalness={0.9} roughness={0.3} />
+        </mesh>
+        {[0, 1, 2].map((i) => (
+          <mesh key={i} rotation={[(i * Math.PI) / 3, 0, 0]} position={[side * 0.008, 0, 0]}>
+            <boxGeometry args={[0.012, 0.52, 0.06]} />
+            <meshStandardMaterial color="#16181b" metalness={0.6} roughness={0.4} />
+          </mesh>
+        ))}
+        <mesh rotation={[0, Math.PI / 2, 0]} position={[side * 0.006, 0, 0]}>
+          <torusGeometry args={[0.27, 0.014, 8, 32]} />
+          <meshStandardMaterial color="#c9ced4" metalness={1} roughness={0.2} />
+        </mesh>
+      </group>
+    </group>
+  )
+}
+
 export function CarModel({ fx }: { fx: RefObject<ThrusterFx> }) {
-  const body = useMemo(() => profileGeometry(BODY, 1.7, 0.12), [])
-  const cabin = useMemo(() => profileGeometry(CABIN, 1.3, 0.1), [])
+  const tub = useMemo(() => profileGeometry([...TUB_TOP, ...NOSE_BOTTOM, ...TAIL_BOTTOM], 1.2, 0.06), [])
+  const shell = useMemo(
+    () => profileGeometry([...SHELL_TOP, ...NOSE_BOTTOM, ...arch(FRONT_AXLE), ...arch(REAR_AXLE), ...TAIL_BOTTOM], 0.26, 0.04),
+    [],
+  )
+  const canopy = useMemo(() => taper(profileGeometry(CANOPY, 1.3, 0.1), 0.38, 0.85, 0.55), [])
 
   return (
     <group>
-      <mesh geometry={body} castShadow receiveShadow>
-        <meshPhysicalMaterial color="#b3111c" metalness={0.6} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+      <mesh geometry={tub} castShadow receiveShadow>
+        <meshPhysicalMaterial color="#e4e6ea" metalness={0.55} roughness={0.3} clearcoat={1} clearcoatRoughness={0.1} />
       </mesh>
-      <mesh geometry={cabin} castShadow>
-        <meshPhysicalMaterial color="#0c0f14" metalness={0.2} roughness={0.05} clearcoat={1} />
-      </mesh>
-      {/* Tail light bar and headlights */}
-      <mesh position={[0, 0.16, -2.25]}>
-        <boxGeometry args={[1.6, 0.05, 0.02]} />
-        <meshBasicMaterial color={[4, 0.2, 0.2]} toneMapped={false} />
-      </mesh>
-      {[0.62, -0.62].map((x) => (
-        <mesh key={x} position={[x, 0.02, 2.13]} rotation={[0, x > 0 ? 0.35 : -0.35, 0]}>
-          <boxGeometry args={[0.38, 0.05, 0.02]} />
-          <meshBasicMaterial color={[3, 3, 3]} toneMapped={false} />
+      {[0.85, -0.85].map((x) => (
+        <mesh key={x} geometry={shell} position={[x, 0, 0]} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#e4e6ea" metalness={0.55} roughness={0.3} clearcoat={1} clearcoatRoughness={0.1} />
         </mesh>
       ))}
+      <mesh geometry={canopy} castShadow>
+        <meshPhysicalMaterial color="#14161b" metalness={0.3} roughness={0.05} clearcoat={1} />
+      </mesh>
+      {/* Dark side sills between the wheels */}
+      {[1.03, -1.03].map((x) => (
+        <mesh key={x} position={[x, -0.2, 0.02]}>
+          <boxGeometry args={[0.03, 0.12, 1.95]} />
+          <meshStandardMaterial color="#121316" metalness={0.4} roughness={0.35} />
+        </mesh>
+      ))}
+      {/* One full-width tail panel over the tub and shells, with a dark diffuser below */}
+      <mesh position={[0, 0.08, -2.37]} castShadow>
+        <boxGeometry args={[2.02, 0.34, 0.06]} />
+        <meshPhysicalMaterial color="#e4e6ea" metalness={0.55} roughness={0.3} clearcoat={1} clearcoatRoughness={0.1} />
+      </mesh>
+      <mesh position={[0, -0.16, -2.36]}>
+        <boxGeometry args={[1.94, 0.16, 0.08]} />
+        <meshStandardMaterial color="#121316" metalness={0.4} roughness={0.35} />
+      </mesh>
+      {/* Rear wing on two struts */}
+      {[0.55, -0.55].map((x) => (
+        <mesh key={x} position={[x, 0.56, -2.0]} rotation={[-0.25, 0, 0]}>
+          <boxGeometry args={[0.04, 0.46, 0.18]} />
+          <meshStandardMaterial color="#1b1d21" metalness={0.5} roughness={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.8, -2.08]} rotation={[0.12, 0, 0]} castShadow>
+        <boxGeometry args={[2.0, 0.05, 0.5]} />
+        <meshPhysicalMaterial color="#e4e6ea" metalness={0.55} roughness={0.3} clearcoat={1} />
+      </mesh>
+      {/* Thin front light bar along the nose, full-width tail light bar */}
+      <mesh position={[0, -0.075, 2.43]}>
+        <boxGeometry args={[1.85, 0.022, 0.02]} />
+        <meshBasicMaterial color={[3, 3, 3]} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.19, -2.405]}>
+        <boxGeometry args={[1.95, 0.035, 0.02]} />
+        <meshBasicMaterial color={[4, 0.2, 0.2]} toneMapped={false} />
+      </mesh>
       {WHEELS.map((p) => (
-        <group key={p.join()} position={p}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.33, 0.33, 0.3, 24]} />
-            <meshStandardMaterial color="#111" roughness={0.9} />
-          </mesh>
-          <mesh rotation={[0, 0, Math.PI / 2]} position={[p[0] > 0 ? 0.151 : -0.151, 0, 0]}>
-            <cylinderGeometry args={[0.22, 0.22, 0.01, 24]} />
-            <meshStandardMaterial color="#9aa3ad" metalness={0.9} roughness={0.3} />
-          </mesh>
-        </group>
+        <Wheel key={p.join()} position={p} />
       ))}
       {/* Cold-gas thruster nozzles */}
       {[...HOVER_NOZZLES, ...BOOST_NOZZLES].map((p) => (
-        <mesh key={p.join()} position={p} rotation={p[2] < -2 ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
-          <cylinderGeometry args={[0.1, 0.13, 0.12, 12]} />
+        <mesh key={p.join()} position={p} rotation={p[2] < -2.2 ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
+          <cylinderGeometry args={[0.07, 0.09, 0.1, 12]} />
           <meshStandardMaterial color="#555b63" metalness={1} roughness={0.35} />
         </mesh>
       ))}
