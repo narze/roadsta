@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { THRUSTER, initialThrusters, tryHop, updateThrusters } from './thrusters'
+import { THRUSTER, initialThrusters, rewardTrick, tryHop, updateThrusters } from './thrusters'
 
 const idle = { hover: false, boost: false, onGround: true }
 
@@ -64,5 +64,16 @@ describe('updateThrusters', () => {
   it('does not refill above capacity', () => {
     const r = updateThrusters({ gas: THRUSTER.capacity - 1 }, idle, 1)
     expect(r.state.gas).toBe(THRUSTER.capacity)
+  })
+})
+
+describe('rewardTrick', () => {
+  it('restores 30% of the tank for a finished trick', () => {
+    expect(THRUSTER.trickRefill).toBe(THRUSTER.capacity * 0.3)
+    expect(rewardTrick({ gas: 20 }).gas).toBeCloseTo(20 + THRUSTER.trickRefill)
+  })
+
+  it('does not fill above capacity', () => {
+    expect(rewardTrick({ gas: 90 }).gas).toBe(THRUSTER.capacity)
   })
 })

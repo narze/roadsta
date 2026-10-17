@@ -71,7 +71,7 @@ export function Hud() {
                 <li><kbd>Enter</kbd> reset to the start line</li>
               </ul>
             )}
-            <p className="note">Thruster gas is limited. It refills when you drive on the road. Finish each spin before you land, or you lose your speed.</p>
+            <p className="note">Thruster gas is limited. It refills when you drive on the road, and each finished trick gives back 30%. Finish each spin before you land, or you lose your speed.</p>
             {touch && <p className="note rotate-hint">Turn your phone sideways for the best view.</p>}
             <button onClick={start} disabled={!g.ready}>{g.ready ? 'Start test drive' : 'Loading...'}</button>
           </div>

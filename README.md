@@ -26,7 +26,7 @@ pnpm dev
 On touch screens: a joystick on the left drives the car. Tap **Hop** to hop and hold it to hover.
 While you hold Hop in the air, flick your finger left/right for a kickflip, or up/down for a front flip or backflip.
 
-Finish each spin before you land. A clean landing scores points (combos multiply them).
+Each finished trick restores 30% of the thruster gas. Finish each spin before you land. A clean landing scores points (combos multiply them).
 Landing mid-spin is a bad landing and costs most of your speed.
 
 ## Test

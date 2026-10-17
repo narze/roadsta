@@ -37,3 +37,14 @@ test('holding Space and tapping an arrow in the air does a kickflip', async ({ p
   await page.keyboard.up('Space')
   expect((await hud(page)).score).toBeGreaterThan(0)
 })
+
+test('a finished trick restores thruster gas in the air', async ({ page }) => {
+  await start(page)
+  await page.keyboard.down('Space')
+  await expect.poll(async () => (await hud(page)).airborne, { timeout: 10_000 }).toBe(true)
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.up('Space') // no hover, so the gas only changes from the hop and the trick
+  const afterHop = (await hud(page)).gas
+  expect(afterHop).toBeLessThan(75)
+  await expect.poll(async () => { const h = await hud(page); return h.airborne && h.gas > afterHop + 25 }, { timeout: 15_000 }).toBe(true)
+})

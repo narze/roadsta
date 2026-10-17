@@ -7,6 +7,7 @@ export const THRUSTER = {
   hoverCostPerSec: 45,
   boostCostPerSec: 35,
   refillPerSec: 12,
+  trickRefill: 30, // gas back for each finished trick (30% of the tank)
 }
 
 export type ThrusterState = { gas: number }
@@ -18,6 +19,10 @@ export const initialThrusters = (): ThrusterState => ({ gas: THRUSTER.capacity }
 export function tryHop(state: ThrusterState, onGround: boolean) {
   if (!onGround || state.gas < THRUSTER.hopCost) return { state, hopped: false }
   return { state: { gas: state.gas - THRUSTER.hopCost }, hopped: true }
+}
+
+export function rewardTrick(state: ThrusterState): ThrusterState {
+  return { gas: Math.min(THRUSTER.capacity, state.gas + THRUSTER.trickRefill) }
 }
 
 export function updateThrusters(state: ThrusterState, input: ThrusterInput, dt: number) {

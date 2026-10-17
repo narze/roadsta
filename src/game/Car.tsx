@@ -8,7 +8,7 @@ import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
-import { initialThrusters, THRUSTER, tryHop, updateThrusters } from './thrusters'
+import { initialThrusters, rewardTrick, THRUSTER, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
 import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
 
@@ -164,8 +164,12 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       tricks.current = startTrick(tricks.current, trickQueued.current, airborne)
       trickQueued.current = null
     }
+    // Each finished spin gives thruster gas back, so tricks can pay for more hover.
+    const doneBefore = tricks.current.combo.length
     tricks.current = updateTricks(tricks.current, dt)
+    if (tricks.current.combo.length > doneBefore) thrusters.current = rewardTrick(thrusters.current)
     if (wasAirborne.current && !airborne) {
+      const almostDone = tricks.current.active !== null
       const landed = land(tricks.current)
       tricks.current = landed.state
       if (landed.result?.kind === 'crash') {
@@ -173,6 +177,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         lat *= 0.2
         game.showToast('Bad landing!', 'bad')
       } else if (landed.result) {
+        // A spin that was nearly done on landing counts as finished, so it earns gas too.
+        if (almostDone) thrusters.current = rewardTrick(thrusters.current)
         const { tricks: done, points } = landed.result
         const combo = done.length > 1 ? ` x${done.length} combo` : ''
         game.addScore(points)
