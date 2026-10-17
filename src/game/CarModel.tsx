@@ -56,7 +56,7 @@ function Flame({ position, dir, fx, kind }: {
   return (
     <group position={position} rotation={rotation}>
       <mesh ref={ref} geometry={geometry} visible={false}>
-        <meshBasicMaterial color={[2.2, 2.6, 4]} transparent opacity={0.75} toneMapped={false} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={[0.5, 1.3, 4]} transparent opacity={0.75} toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
   )

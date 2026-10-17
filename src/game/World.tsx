@@ -136,7 +136,7 @@ function RoadMarkings() {
     <>
       <Instances limit={dashes.length}>
         <planeGeometry args={[0.35, 5]} />
-        <meshStandardMaterial color="#f2f2f2" />
+        <meshStandardMaterial color="#cfcfcf" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-8} />
         {dashes.map((z) => (
           <Instance key={z} position={[0, 0.012, z]} rotation={[-Math.PI / 2, 0, 0]} />
         ))}
@@ -144,7 +144,7 @@ function RoadMarkings() {
       {/* Start line */}
       <mesh position={[0, 0.013, 3]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[ROAD_WIDTH, 0.8]} />
-        <meshStandardMaterial color="#f2f2f2" />
+        <meshStandardMaterial color="#cfcfcf" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-8} />
       </mesh>
     </>
   )
@@ -163,7 +163,7 @@ export function World() {
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, ROAD_Z]} receiveShadow>
         <planeGeometry args={[ROAD_WIDTH, ROAD_LENGTH]} />
-        <meshStandardMaterial color="#2c2f33" roughness={0.85} />
+        <meshStandardMaterial color="#2c2f33" roughness={0.85} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-4} />
       </mesh>
       <RoadMarkings />
 

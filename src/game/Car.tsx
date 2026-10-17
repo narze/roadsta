@@ -1,12 +1,13 @@
 import { useKeyboardControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { RigidBody, RoundCuboidCollider, useRapier, type RapierRigidBody } from '@react-three/rapier'
+import { RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { CarModel, type ThrusterFx } from './CarModel'
 import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
+import { GRAVITY } from './physics'
 import { initialThrusters, THRUSTER, tryHop, updateThrusters } from './thrusters'
 
 const START: [number, number, number] = [0, 0.5, 0]
@@ -41,6 +42,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
   const resetHeld = useRef(false)
   const hudTimer = useRef(0)
   const launch = useRef(initialLaunchTimer())
+  const sim = useRef({ fwd: 0, vy: 0, turn: 0, mph: 0, airborne: false, hovering: false, boosting: false, hopBurst: false })
   const { world, rapier } = useRapier()
   const [subscribeKeys, getKeys] = useKeyboardControls<keyof typeof Control>()
 
@@ -63,20 +65,16 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     thrusters.current = initialThrusters()
   }, [resetId])
 
-  useFrame((_, delta) => {
+  // Driving runs once per physics step, so it behaves the same at any frame rate.
+  useBeforePhysicsStep(() => {
     const b = body.current
     if (!b) return
-    const dt = Math.min(delta, 1 / 30)
+    const dt = world.timestep
     const keys = getKeys()
     const game = useGame.getState()
     const active = game.started
 
-    if (keys.reset && !resetHeld.current) game.reset()
-    resetHeld.current = keys.reset
-
     const pos = b.translation()
-    if (pos.y < -30) game.reset()
-
     // Ground check: short ray down from the body center.
     const ray = new rapier.Ray(pos, { x: 0, y: -1, z: 0 })
     const hit = world.castRay(ray, HALF_HEIGHT + 0.2, true, rapier.QueryFilterFlags.EXCLUDE_SENSORS, undefined, undefined, b)
@@ -100,12 +98,13 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     const jumpPressed = active && jumpQueued.current
     jumpQueued.current = false
     let airborne = !onGround
+    let hopped = false
     if (jumpPressed) {
       const hop = tryHop(thrusters.current, onGround)
       thrusters.current = hop.state
       if (hop.hopped) {
         vy = Math.max(vy, 0) + THRUSTER.hopVelocity
-        airborne = true
+        airborne = hopped = true
       }
     }
     const t = updateThrusters(
@@ -122,7 +121,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       lat *= Math.exp(-DRIVE.grip * dt)
     }
     if (t.boosting) fwd += DRIVE.boostAccel * dt
-    if (t.hovering) vy = THREE.MathUtils.damp(vy, DRIVE.hoverLift, 5, dt)
+    // Hover cancels the gravity of this step, then eases toward a slow climb.
+    if (t.hovering) vy = THREE.MathUtils.damp(vy, DRIVE.hoverLift, 5, dt) + GRAVITY * dt
 
     const turn = onGround
       ? steer * DRIVE.steer * THREE.MathUtils.clamp(fwd / 6, -1, 1) / (1 + Math.abs(fwd) / 45)
@@ -131,38 +131,60 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     b.setLinvel({ x: forward.x * fwd + right.x * lat, y: vy, z: forward.z * fwd + right.z * lat }, true)
     b.setAngvel({ x: 0, y: turn, z: 0 }, true)
 
+    const mph = Math.abs(fwd) * MPS_TO_MPH
+    launch.current = updateLaunchTimer(launch.current, mph, dt)
+    Object.assign(sim.current, {
+      fwd, vy, turn, mph, airborne,
+      hovering: t.hovering,
+      boosting: t.boosting,
+      hopBurst: sim.current.hopBurst || hopped,
+    })
+  })
+
+  // Visuals, camera target, and HUD follow the render frame.
+  useFrame((_, delta) => {
+    const b = body.current
+    if (!b) return
+    const dt = Math.min(delta, 0.1)
+    const keys = getKeys()
+    const game = useGame.getState()
+    const s = sim.current
+
+    if (keys.reset && !resetHeld.current) game.reset()
+    resetHeld.current = keys.reset
+    const pos = b.translation()
+    if (pos.y < -30) game.reset()
+
     // Visual tilt: pitch with vertical speed in the air, roll into turns.
     const g = visual.current
     if (g) {
-      const pitch = airborne ? THREE.MathUtils.clamp(-vy * 0.03, -0.25, 0.25) : 0
+      const pitch = s.airborne ? THREE.MathUtils.clamp(-s.vy * 0.03, -0.25, 0.25) : 0
       g.rotation.x = THREE.MathUtils.damp(g.rotation.x, pitch, 6, dt)
-      g.rotation.z = THREE.MathUtils.damp(g.rotation.z, -turn * Math.min(Math.abs(fwd) / 60, 1) * 0.06, 6, dt)
+      g.rotation.z = THREE.MathUtils.damp(g.rotation.z, -s.turn * Math.min(Math.abs(s.fwd) / 60, 1) * 0.06, 6, dt)
     }
     // A hop fires a short burst; hover and boost hold a steady flame.
-    fx.current.hover = jumpPressed && airborne ? 1.6 : THREE.MathUtils.damp(fx.current.hover, t.hovering ? 1 : 0, 12, dt)
-    fx.current.boost = THREE.MathUtils.damp(fx.current.boost, t.boosting ? 1 : 0, 12, dt)
-
-    const mph = Math.abs(fwd) * MPS_TO_MPH
-    const prevPhase = launch.current.phase
-    launch.current = updateLaunchTimer(launch.current, mph, dt)
+    fx.current.hover = s.hopBurst ? 1.6 : THREE.MathUtils.damp(fx.current.hover, s.hovering ? 1 : 0, 12, dt)
+    fx.current.boost = THREE.MathUtils.damp(fx.current.boost, s.boosting ? 1 : 0, 12, dt)
+    s.hopBurst = false
 
     // Throttle HUD updates to about 20 Hz.
     hudTimer.current += dt
-    if (hudTimer.current > 0.05 || launch.current.phase !== prevPhase) {
+    if (hudTimer.current > 0.05 || launch.current.phase !== game.launch.phase) {
       hudTimer.current = 0
       useGame.setState({
-        mph,
-        gas: t.state.gas,
-        airborne,
-        hovering: t.hovering,
-        boosting: t.boosting,
+        mph: s.mph,
+        gas: thrusters.current.gas,
+        airborne: s.airborne,
+        hovering: s.hovering,
+        boosting: s.boosting,
         altitude: Math.max(0, pos.y - HALF_HEIGHT),
         launch: launch.current,
       })
     }
 
+    const r = b.rotation()
     target.current?.position.set(pos.x, pos.y, pos.z)
-    target.current?.quaternion.copy(quat)
+    target.current?.quaternion.set(r.x, r.y, r.z, r.w)
   })
 
   return (
