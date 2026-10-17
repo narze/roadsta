@@ -1,6 +1,6 @@
 import nipplejs from 'nipplejs'
 import { useEffect, useRef, type PointerEvent } from 'react'
-import { detectFlick, flickToTrick, type FlickDir, type FlickPoint } from './flick'
+import { detectFlick, flickToTrick, startFlick, type FlickDir, type FlickState } from './flick'
 import { useGame } from './store'
 import { useTouchInput } from './touchInput'
 
@@ -12,17 +12,17 @@ function HoldButton({ label, className, onChange, onFlick }: {
   onChange: (down: boolean) => void
   onFlick?: (dir: FlickDir) => void
 }) {
-  const anchor = useRef<FlickPoint | null>(null)
+  const flick = useRef<FlickState | null>(null)
   const press = (down: boolean) => (e: PointerEvent<HTMLButtonElement>) => {
     e.preventDefault()
     if (down) e.currentTarget.setPointerCapture(e.pointerId)
-    anchor.current = down ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null
+    flick.current = down ? startFlick({ x: e.clientX, y: e.clientY, t: e.timeStamp }) : null
     onChange(down)
   }
   const move = (e: PointerEvent<HTMLButtonElement>) => {
-    if (!onFlick || !anchor.current) return
-    const r = detectFlick(anchor.current, { x: e.clientX, y: e.clientY, t: e.timeStamp })
-    anchor.current = r.anchor
+    if (!onFlick || !flick.current) return
+    const r = detectFlick(flick.current, { x: e.clientX, y: e.clientY, t: e.timeStamp })
+    flick.current = r.state
     if (r.dir) onFlick(r.dir)
   }
   return (
