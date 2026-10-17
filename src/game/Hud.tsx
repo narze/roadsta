@@ -1,13 +1,25 @@
 import { RING_COUNT, useGame } from './store'
+import { TouchControls } from './TouchControls'
+import { useIsTouch } from './useIsTouch'
 import './hud.css'
 
 const fmt = (s: number | null) => (s === null ? '-' : `${s.toFixed(2)} s`)
 
 export function Hud() {
   const g = useGame()
+  const touch = useIsTouch()
+  const start = () => {
+    // On phones, go full screen in landscape where the browser allows it.
+    if (touch) {
+      document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
+        ?.then(() => (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape'))
+        .catch(() => {})
+    }
+    g.start()
+  }
   const status = g.hovering ? 'HOVER' : g.boosting ? 'BOOST' : g.airborne ? 'AIRBORNE' : 'ROAD'
   return (
-    <div className="hud">
+    <div className={touch ? 'hud touch' : 'hud'}>
       <div className="panel top-left">
         <div className="label">Rings</div>
         <div className="big">{g.rings} / {RING_COUNT}</div>
@@ -37,17 +49,28 @@ export function Hud() {
           <div className="card">
             <h1>Roadster 2026</h1>
             <p className="sub">Test drive with the SpaceX cold-gas thruster pack</p>
-            <ul>
-              <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</li>
-              <li><kbd>Space</kbd> hop - hold it to hover for a moment</li>
-              <li><kbd>Shift</kbd> thruster boost - 0-60 mph in under 1 s</li>
-              <li><kbd>Enter</kbd> reset to the start line</li>
-            </ul>
+            {touch ? (
+              <ul>
+                <li><b>Left thumb</b> - joystick: up to drive, down to brake, sideways to steer</li>
+                <li><b>Hop</b> - hold it to hover for a moment</li>
+                <li><b>Boost</b> - 0-60 mph in under 1 s</li>
+                <li><b>↺</b> - reset to the start line</li>
+              </ul>
+            ) : (
+              <ul>
+                <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</li>
+                <li><kbd>Space</kbd> hop - hold it to hover for a moment</li>
+                <li><kbd>Shift</kbd> thruster boost - 0-60 mph in under 1 s</li>
+                <li><kbd>Enter</kbd> reset to the start line</li>
+              </ul>
+            )}
             <p className="note">Thruster gas is limited. It refills when you drive on the road.</p>
-            <button onClick={g.start} disabled={!g.ready}>{g.ready ? 'Start test drive' : 'Loading...'}</button>
+            {touch && <p className="note rotate-hint">Turn your phone sideways for the best view.</p>}
+            <button onClick={start} disabled={!g.ready}>{g.ready ? 'Start test drive' : 'Loading...'}</button>
           </div>
         </div>
       )}
+      {touch && g.started && <TouchControls />}
     </div>
   )
 }

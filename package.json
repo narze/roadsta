@@ -16,6 +16,7 @@
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.0",
     "@react-three/rapier": "^2.2.0",
+    "nipplejs": "^1.0.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "three": "^0.186.1",

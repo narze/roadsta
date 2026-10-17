@@ -1,3 +1,4 @@
 * { box-sizing: border-box; }
-html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #0b0d12; }
-body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #fff; }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #0b0d12; overscroll-behavior: none; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #fff; -webkit-tap-highlight-color: transparent; }
+canvas { touch-action: none; }

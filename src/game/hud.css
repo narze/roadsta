@@ -26,3 +26,81 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 5
 .card button { width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 10px; background: #e31937; color: #fff; font: 700 16px system-ui; cursor: pointer; }
 .card button:hover:enabled { background: #ff2a49; }
 .card button:disabled { background: #444a55; cursor: wait; }
+
+/* Touch layout: speed and gas move to the top, thumbs own the bottom corners. */
+.hud.touch .panel { padding: 8px 12px; min-width: 120px; }
+.hud.touch .big { font-size: 22px; }
+.hud.touch .top-left { top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); }
+.hud.touch .top-right { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+.hud.touch .bottom-left,
+.hud.touch .bottom-right { top: max(10px, env(safe-area-inset-top)); bottom: auto; left: 50%; right: auto; }
+.hud.touch .bottom-left { transform: translateX(calc(-100% - 5px)); min-width: 110px; }
+.hud.touch .bottom-right { transform: translateX(5px); min-width: 150px; }
+.hud.touch .speed { font-size: 34px; }
+.hud.touch .speed small { font-size: 13px; }
+.hud.touch .status { margin-bottom: 2px; font-size: 13px; }
+.rotate-hint { display: none; }
+@media (orientation: portrait) {
+  .hud.touch .bottom-left,
+  .hud.touch .bottom-right { top: calc(max(10px, env(safe-area-inset-top)) + 96px); }
+  .rotate-hint { display: block; color: #ffd27a; }
+}
+
+.hud.touch .overlay { overflow-y: auto; padding: 12px 0; }
+.hud.touch .card { padding: 18px 22px; }
+.hud.touch .card h1 { font-size: 26px; }
+.hud.touch .card .sub { margin-bottom: 8px; }
+.hud.touch .card ul { line-height: 1.5; font-size: 14px; }
+.hud.touch .card li { margin-bottom: 4px; }
+
+.touch-controls { position: absolute; inset: 0; pointer-events: none; -webkit-touch-callout: none; }
+.joystick-zone {
+  position: absolute;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 200px;
+  height: 200px;
+  pointer-events: auto;
+}
+.touch-buttons {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+.touch-btn {
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  color: #fff;
+  font: 800 14px system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+.touch-btn:active { transform: scale(0.94); border-color: #fff; }
+.touch-btn.hop { width: 96px; height: 96px; background: rgba(79, 195, 255, 0.35); }
+.touch-btn.hop:active { background: rgba(79, 195, 255, 0.7); }
+.touch-btn.boost { width: 72px; height: 72px; margin-bottom: 70px; background: rgba(255, 179, 71, 0.35); }
+.touch-btn.boost:active { background: rgba(255, 179, 71, 0.7); }
+.touch-reset {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 96px);
+  right: max(10px, env(safe-area-inset-right));
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(10, 12, 18, 0.55);
+  color: #fff;
+  font-size: 20px;
+  pointer-events: auto;
+}
+@media (orientation: portrait) {
+  .touch-reset { top: calc(max(10px, env(safe-area-inset-top)) + 196px); }
+}

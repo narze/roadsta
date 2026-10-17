@@ -9,6 +9,7 @@ import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
 import { initialThrusters, THRUSTER, tryHop, updateThrusters } from './thrusters'
+import { useTouchInput } from './touchInput'
 
 const START: [number, number, number] = [0, 0.5, 0]
 const HALF_HEIGHT = 0.45 // collider half height + rounding
@@ -49,10 +50,12 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
   useEffect(() => useGame.getState().setReady(), [])
 
   // Queue hops from key events, so a quick tap between two frames is not lost.
-  useEffect(
-    () => subscribeKeys((s) => s.jump, (pressed) => { if (pressed) jumpQueued.current = true }),
-    [subscribeKeys],
-  )
+  useEffect(() => {
+    const queue = (pressed: boolean) => { if (pressed) jumpQueued.current = true }
+    const offKeys = subscribeKeys((s) => s.jump, queue)
+    const offTouch = useTouchInput.subscribe((s, prev) => { if (s.jump !== prev.jump) queue(s.jump) })
+    return () => { offKeys(); offTouch() }
+  }, [subscribeKeys])
   const resetId = useGame((s) => s.resetId)
 
   useEffect(() => {
@@ -71,6 +74,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     if (!b) return
     const dt = world.timestep
     const keys = getKeys()
+    const touch = useTouchInput.getState()
     const game = useGame.getState()
     const active = game.started
 
@@ -91,8 +95,12 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     let lat = v.x * right.x + v.z * right.z
     let vy = v.y
 
-    const throttle = active ? (keys.forward ? 1 : 0) - (keys.back ? 1 : 0) : 0
-    const steer = active ? (keys.left ? 1 : 0) - (keys.right ? 1 : 0) : 0
+    // Keyboard is digital; the touch joystick is analog. Use whichever is active.
+    const keyThrottle = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0)
+    const keySteer = (keys.left ? 1 : 0) - (keys.right ? 1 : 0)
+    const throttle = active ? keyThrottle || touch.throttle : 0
+    const steer = active ? keySteer || touch.steer : 0
+    const jumpHeld = keys.jump || touch.jump
 
     // Hop on the press edge; hover while Space stays held after the hop peaks.
     const jumpPressed = active && jumpQueued.current
@@ -109,14 +117,14 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     }
     const t = updateThrusters(
       thrusters.current,
-      { hover: active && keys.jump && airborne && vy < 1, boost: active && keys.boost, onGround: !airborne },
+      { hover: active && jumpHeld && airborne && vy < 1, boost: active && (keys.boost || touch.boost), onGround: !airborne },
       dt,
     )
     thrusters.current = t.state
 
     if (onGround) {
-      if (throttle > 0) fwd += DRIVE.accel * Math.max(0, 1 - fwd / DRIVE.topSpeed) * dt
-      else if (throttle < 0) fwd = fwd > 0 ? Math.max(0, fwd - DRIVE.brake * dt) : Math.max(-DRIVE.reverseMax, fwd - DRIVE.reverseAccel * dt)
+      if (throttle > 0) fwd += throttle * DRIVE.accel * Math.max(0, 1 - fwd / DRIVE.topSpeed) * dt
+      else if (throttle < 0) fwd = fwd > 0 ? Math.max(0, fwd + throttle * DRIVE.brake * dt) : Math.max(-DRIVE.reverseMax, fwd + throttle * DRIVE.reverseAccel * dt)
       else fwd *= 1 - DRIVE.rollDrag * dt
       lat *= Math.exp(-DRIVE.grip * dt)
     }
