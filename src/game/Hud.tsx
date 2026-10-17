@@ -52,8 +52,8 @@ export function Hud() {
       {!g.started && (
         <div className="overlay">
           <div className="card">
-            <h1>Roadster 2026</h1>
-            <p className="sub">Test drive with the SpaceX cold-gas thruster pack</p>
+            <h1>Tesler Roadsta</h1>
+            <p className="sub">Test drive with the cold-gas thruster pack</p>
             {touch ? (
               <ul>
                 <li><b>Left thumb</b> - joystick: up to drive, down to brake, sideways to steer</li>

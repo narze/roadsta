@@ -1,6 +1,6 @@
-# Roadster 2026 - Test Drive
+# Tesler Roadsta - Test Drive
 
-A browser test drive of the 2026 Tesla Roadster with the SpaceX cold-gas thruster pack.
+A browser test drive of the Tesler Roadsta with a cold-gas thruster pack.
 The car does not fly. It launches very fast, hops, and hovers for a short time.
 
 Stack: Vite, React, three.js, React Three Fiber, drei, Rapier physics, postprocessing, zustand.

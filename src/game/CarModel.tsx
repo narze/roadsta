@@ -97,7 +97,7 @@ export function CarModel({ fx }: { fx: RefObject<ThrusterFx> }) {
           </mesh>
         </group>
       ))}
-      {/* SpaceX cold-gas thruster nozzles */}
+      {/* Cold-gas thruster nozzles */}
       {[...HOVER_NOZZLES, ...BOOST_NOZZLES].map((p) => (
         <mesh key={p.join()} position={p} rotation={p[2] < -2 ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
           <cylinderGeometry args={[0.1, 0.13, 0.12, 12]} />
