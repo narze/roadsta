@@ -93,6 +93,15 @@ class Sound {
     // and one physics step can play two sounds on the same synth.
     const now = Math.max(this.tone.now(), this.lastStart + 0.001)
     this.lastStart = now
+    try {
+      this.trigger(n, name, now)
+    } catch {
+      // Tone.js also moves past start times up to the audio clock, so on a busy machine two sounds
+      // can still get the same time. Skip that sound: audio must never stop the game.
+    }
+  }
+
+  private trigger(n: Nodes, name: SfxName, now: number) {
     switch (name) {
       case 'hop':
         n.puff.triggerAttackRelease(0.12, now)
