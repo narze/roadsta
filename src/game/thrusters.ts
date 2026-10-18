@@ -38,6 +38,11 @@ export function tryAirTurn(state: ThrusterState, airborne: boolean) {
   return { state: { ...state, airTurnReady: false }, turned: true }
 }
 
+// Unlimited gas mode: the tank is kept full.
+export function fillTank(state: ThrusterState): ThrusterState {
+  return { ...state, gas: THRUSTER.capacity }
+}
+
 export function rewardTrick(state: ThrusterState): ThrusterState {
   return { ...state, gas: Math.min(THRUSTER.capacity, state.gas + THRUSTER.trickRefill) }
 }

@@ -3,6 +3,7 @@ import { sound } from '../audio/sound'
 import { loadMuted, saveMuted } from '../audio/soundParams'
 import { RINGS } from './course'
 import { initialLaunchTimer, type LaunchTimer } from './launchTimer'
+import { loadUnlimitedGas, saveUnlimitedGas } from './settings'
 import type { TrickKind } from './tricks'
 
 export const RING_COUNT = RINGS.length
@@ -30,6 +31,8 @@ type GameState = {
   score: number
   muted: boolean
   toggleMute: () => void
+  unlimitedGas: boolean
+  setUnlimitedGas: (on: boolean) => void
   toast: Toast | null
   showToast: (text: string, tone: Toast['tone']) => void
   addScore: (points: number) => void
@@ -64,6 +67,11 @@ export const useGame = create<GameState>((set, get) => ({
     saveMuted(window.localStorage, muted)
     sound.setMuted(muted)
     set({ muted })
+  },
+  unlimitedGas: loadUnlimitedGas(window.localStorage),
+  setUnlimitedGas: (on) => {
+    saveUnlimitedGas(window.localStorage, on)
+    set({ unlimitedGas: on })
   },
   toast: null,
   showToast: (text, tone) => set((s) => ({ toast: { id: (s.toast?.id ?? 0) + 1, text, tone } })),

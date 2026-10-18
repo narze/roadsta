@@ -10,8 +10,8 @@ import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
-import { airTurnDelta, inputAngle } from './airTurn'
-import { boostAcceleration, initialThrusters, rewardTrick, THRUSTER, tryAirTurn, tryHop, updateThrusters } from './thrusters'
+import { airTurnDelta, inputAngle, KEYBOARD_MAX_TURN } from './airTurn'
+import { boostAcceleration, fillTank, initialThrusters, rewardTrick, THRUSTER, tryAirTurn, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
 import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
 
@@ -128,6 +128,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     const touch = useTouchInput.getState()
     const game = useGame.getState()
     const active = game.started
+    if (game.unlimitedGas) thrusters.current = fillTank(thrusters.current)
 
     const pos = b.translation()
     // Ground check: short ray down from the body center.
@@ -174,7 +175,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     }
 
     // Air turn: Boost pressed in the air with a direction held snaps the car to face that direction
-    // as seen from the camera, at the exact pushed angle. Speed carries along the new heading.
+    // as seen from the camera, at the exact pushed angle (keyboard: at most 45 degrees).
+    // Speed carries along the new heading.
     const boostPressed = active && boostQueued.current
     const request = active ? turnRequest.current : null
     boostQueued.current = false
@@ -187,7 +189,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       : keysHeld ? inputAngle(keyThrottle, keySteer)
       : inputAngle(touch.stick.y, -touch.stick.x) // raw stick: exact angle, no per-axis dead zone
     camera.getWorldDirection(cameraDir)
-    const delta = angle === null ? null : airTurnDelta(euler.y, Math.atan2(cameraDir.x, cameraDir.z), angle)
+    const maxTurn = request || keysHeld ? KEYBOARD_MAX_TURN : Math.PI
+    const delta = angle === null ? null : airTurnDelta(euler.y, Math.atan2(cameraDir.x, cameraDir.z), angle, maxTurn)
     if (delta !== null) {
       const airTurn = tryAirTurn(thrusters.current, airborne)
       thrusters.current = airTurn.state
@@ -207,7 +210,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       { hover: active && jumpHeld && airborne && vy < 1, boost: active && (keys.boost || touch.boost), onGround: !airborne },
       dt,
     )
-    thrusters.current = t.state
+    thrusters.current = game.unlimitedGas ? fillTank(t.state) : t.state
 
     if (onGround) {
       if (throttle > 0) fwd += throttle * DRIVE.accel * Math.max(0, 1 - fwd / DRIVE.topSpeed) * dt

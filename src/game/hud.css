@@ -23,6 +23,8 @@
 .card ul { margin: 0; padding-left: 18px; line-height: 2; }
 .card .note { font-size: 13px; opacity: 0.7; }
 kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 5px; background: #2a2f3a; border-bottom: 2px solid #11141a; font: 600 12px system-ui; text-align: center; }
+.card .toggle { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; font-size: 14px; cursor: pointer; }
+.card .toggle input { width: 16px; height: 16px; margin: 0; accent-color: #e31937; cursor: pointer; }
 .card button { width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 10px; background: #e31937; color: #fff; font: 700 16px system-ui; cursor: pointer; }
 .card button:hover:enabled { background: #ff2a49; }
 .card button:disabled { background: #444a55; cursor: wait; }
