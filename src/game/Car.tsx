@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { sound } from '../audio/sound'
 import { CarModel, type ThrusterFx } from './CarModel'
 import { CAR_WIDTH } from './course'
 import { Control } from './controls'
@@ -164,6 +165,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       const hop = tryHop(thrusters.current, onGround)
       thrusters.current = hop.state
       if (hop.hopped) {
+        sound.play(hop.kind === 'air' ? 'doubleJump' : 'hop')
         // A ground hop adds to any upward speed (ramps); a double jump sets it, so it also stops a fall.
         vy = hop.kind === 'air' ? THRUSTER.hopVelocity : Math.max(vy, 0) + THRUSTER.hopVelocity
         airborne = hopped = true
@@ -196,6 +198,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         b.setRotation(quat.setFromAxisAngle(UP, yaw), true)
         turned = true
         useGame.setState({ lastAirTurn: delta })
+        sound.play('airTurn')
       }
     }
 
@@ -218,7 +221,9 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
 
     // Tricks spin the model only. Landing mid-spin is a crash and kills most of the speed.
     if (trickQueued.current) {
+      const wasSpinning = tricks.current.active
       tricks.current = startTrick(tricks.current, trickQueued.current, airborne)
+      if (!wasSpinning && tricks.current.active) sound.play('spin')
       trickQueued.current = null
     }
     // Each finished spin gives thruster gas back, so tricks can pay for more hover.
@@ -229,6 +234,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       const almostDone = tricks.current.active !== null
       const landed = land(tricks.current)
       tricks.current = landed.state
+      sound.play(landed.result?.kind === 'crash' ? 'crash' : 'land')
       if (landed.result?.kind === 'crash') {
         fwd *= 0.2
         lat *= 0.2
@@ -239,6 +245,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         const { tricks: done, points } = landed.result
         const combo = done.length > 1 ? ` x${done.length} combo` : ''
         game.addScore(points)
+        sound.play('trick')
         game.showToast(`${done.map((t) => TRICK_NAMES[t]).join(' + ')}${combo}  +${points}`, 'good')
       }
     }
@@ -296,6 +303,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     hudTimer.current += dt
     if (hudTimer.current > 0.05 || launch.current.phase !== game.launch.phase) {
       hudTimer.current = 0
+      sound.update(s)
       useGame.setState({
         mph: s.mph,
         gas: thrusters.current.gas,

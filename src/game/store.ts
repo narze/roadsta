@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { sound } from '../audio/sound'
+import { loadMuted, saveMuted } from '../audio/soundParams'
 import { RINGS } from './course'
 import { initialLaunchTimer, type LaunchTimer } from './launchTimer'
 import type { TrickKind } from './tricks'
@@ -26,6 +28,8 @@ type GameState = {
   courseTime: number | null
   resetId: number
   score: number
+  muted: boolean
+  toggleMute: () => void
   toast: Toast | null
   showToast: (text: string, tone: Toast['tone']) => void
   addScore: (points: number) => void
@@ -54,6 +58,13 @@ export const useGame = create<GameState>((set, get) => ({
   courseTime: null,
   resetId: 0,
   score: 0,
+  muted: loadMuted(window.localStorage),
+  toggleMute: () => {
+    const muted = !get().muted
+    saveMuted(window.localStorage, muted)
+    sound.setMuted(muted)
+    set({ muted })
+  },
   toast: null,
   showToast: (text, tone) => set((s) => ({ toast: { id: (s.toast?.id ?? 0) + 1, text, tone } })),
   addScore: (points) => set((s) => ({ score: s.score + points })),
@@ -72,6 +83,7 @@ export const useGame = create<GameState>((set, get) => ({
       courseStart: begin,
       courseTime: rings === RING_COUNT ? (now - begin) / 1000 : null,
     })
+    sound.play(rings === RING_COUNT ? 'finish' : 'ring')
   },
   reset: () =>
     set((s) => ({
@@ -83,6 +95,8 @@ export const useGame = create<GameState>((set, get) => ({
       resetId: s.resetId + 1,
     })),
 }))
+
+sound.setMuted(useGame.getState().muted)
 
 // Lets E2E tests read the game state.
 ;(window as unknown as { __roadster: typeof useGame }).__roadster = useGame
