@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { airTurnDelta, inputAngle } from './airTurn'
+import { airTurnDelta, inputAngle, KEYBOARD_MAX_TURN } from './airTurn'
 import { initialThrusters, tryAirTurn, updateThrusters } from './thrusters'
 
 // Input angle: forward = push up / away, left = push left. Radians, positive = left of "up".
@@ -32,6 +32,17 @@ describe('airTurnDelta', () => {
 
   it('takes the short way around across the +/-180 degree line', () => {
     expect(airTurnDelta(Math.PI - 0.1, -Math.PI + 0.1, 0)).toBeCloseTo(0.2)
+  })
+
+  it('limits the turn to a maximum angle, in the same direction', () => {
+    expect(airTurnDelta(0, 0, Math.PI / 2, KEYBOARD_MAX_TURN)).toBeCloseTo(KEYBOARD_MAX_TURN)
+    expect(airTurnDelta(0, 0, -Math.PI / 2, KEYBOARD_MAX_TURN)).toBeCloseTo(-KEYBOARD_MAX_TURN)
+    expect(Math.abs(airTurnDelta(0, 0, Math.PI, KEYBOARD_MAX_TURN)!)).toBeCloseTo(KEYBOARD_MAX_TURN)
+    expect(airTurnDelta(0, 0, 0.3, KEYBOARD_MAX_TURN)).toBeCloseTo(0.3) // smaller turns are not changed
+  })
+
+  it('keyboard turns are limited to 20 degrees', () => {
+    expect(KEYBOARD_MAX_TURN).toBeCloseTo(Math.PI / 9)
   })
 
   it('does not turn when the car already faces about that way', () => {

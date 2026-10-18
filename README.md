@@ -24,7 +24,7 @@ pnpm dev
 | Arrow keys or WASD | Drive |
 | Space | Hop - press again in the air for a free double jump, hold it to hover |
 | Shift | Thruster boost (0-60 mph in under 1 s) |
-| In the air: Shift + an arrow (or diagonal) | Air turn: instantly face that direction on screen, keeping your speed (once per jump) |
+| In the air: Shift + an arrow (or diagonal) | Air turn: instantly turn up to 20° toward that direction on screen, keeping your speed (once per jump) |
 | Enter or Backspace | Reset to the start line |
 | M | Mute / unmute sound (remembered) |
 | In the air: hold Space + ← / → | Kickflip left / right |
@@ -34,7 +34,7 @@ On touch screens: a joystick on the left drives the car. Tap **Hop** to hop, tap
 In the air, tap **Boost** while the joystick is pushed: the car instantly faces the exact direction you push, as seen on screen (once per jump).
 While you hold Hop in the air, flick your finger left/right for a kickflip, or up/down for a front flip or backflip.
 
-Each finished trick restores 30% of the thruster gas. Finish each spin before you land. A clean landing scores points (combos multiply them).
+Each finished trick restores 30% of the thruster gas. Tick **Unlimited gas** on the start card to keep the tank full (remembered). Finish each spin before you land. A clean landing scores points (combos multiply them).
 Landing mid-spin is a bad landing and costs most of your speed.
 
 ## Sound

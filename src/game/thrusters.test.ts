@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { THRUSTER, boostAcceleration, initialThrusters, rewardTrick, tryHop, updateThrusters } from './thrusters'
+import { THRUSTER, boostAcceleration, fillTank, initialThrusters, rewardTrick, tryHop, updateThrusters } from './thrusters'
 
 const tank = (gas: number) => ({ ...initialThrusters(), gas })
 
@@ -115,5 +115,12 @@ describe('boost on an empty tank', () => {
     const r = updateThrusters(tank(0), { hover: false, boost: true, onGround: true }, 1)
     expect(r.boosting).toBe(false)
     expect(r.state.gas).toBe(0)
+  })
+})
+
+describe('fillTank (unlimited gas mode)', () => {
+  it('fills the tank and keeps the air jump and air turn state', () => {
+    const used = { gas: 3, airJumpReady: false, airTurnReady: false }
+    expect(fillTank(used)).toEqual({ gas: THRUSTER.capacity, airJumpReady: false, airTurnReady: false })
   })
 })

@@ -80,14 +80,15 @@ test('pressing Space again in the air does a free double jump', async ({ page })
 
 const turnedBy = (from: number, to: number) => Math.abs(Math.atan2(Math.sin(to - from), Math.cos(to - from)))
 
-test('Boost with a direction held in the air turns the car instantly, once per jump', async ({ page }) => {
+test('Boost with a direction held in the air turns the car up to 20 degrees, once per jump', async ({ page }) => {
   await start(page)
   await page.keyboard.down('Space') // hop, then hover to stay up longer
   await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
   const before = (await hud(page)).heading
-  await page.keyboard.down('ArrowDown') // "back": a 180 degree turn, with no air steering drift
+  await page.keyboard.down('ArrowDown') // "back": would be 180 degrees, but keyboard turns stop at 20
   await page.keyboard.press('ShiftLeft')
-  await expect.poll(async () => turnedBy(before, (await hud(page)).heading), { timeout: 30_000 }).toBeGreaterThan(Math.PI - 0.2)
+  await expect.poll(async () => turnedBy(before, (await hud(page)).heading), { timeout: 30_000 }).toBeGreaterThan(Math.PI / 9 - 0.1)
+  expect(Math.abs((await page.evaluate(() => (window as unknown as { __roadster: { getState: () => { lastAirTurn: number } } }).__roadster.getState().lastAirTurn)))).toBeCloseTo(Math.PI / 9, 2)
   const after = (await hud(page)).heading
   await page.keyboard.press('ShiftLeft') // second press in the same jump: no turn
   await page.waitForTimeout(500)
@@ -104,8 +105,25 @@ test('while hovering, holding Shift then pressing an arrow turns the car and doe
   await page.keyboard.down('ShiftLeft')
   await page.keyboard.press('ArrowDown')
   await page.keyboard.up('ShiftLeft')
-  await expect.poll(async () => turnedBy(before, (await hud(page)).heading), { timeout: 30_000 }).toBeGreaterThan(Math.PI - 0.2)
+  await expect.poll(async () => turnedBy(before, (await hud(page)).heading), { timeout: 30_000 }).toBeGreaterThan(Math.PI / 9 - 0.1)
   await page.keyboard.up('Space')
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 30_000 }).toBe(false)
   expect((await hud(page)).score).toBe(0) // no backflip was started
+})
+
+test('the unlimited gas checkbox keeps the tank full and is remembered', async ({ page }) => {
+  await page.goto('/')
+  const box = page.getByRole('checkbox', { name: 'Unlimited gas' })
+  await expect(box).not.toBeChecked()
+  await box.check()
+  await page.reload()
+  await expect(page.getByRole('checkbox', { name: 'Unlimited gas' })).toBeChecked()
+  await page.getByRole('button', { name: 'Start test drive' }).click()
+  await page.keyboard.down('Space') // hop, then hover: both use gas in normal mode
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  await page.keyboard.down('ShiftLeft')
+  await page.waitForTimeout(1500)
+  expect((await hud(page)).gas).toBe(100)
+  await page.keyboard.up('ShiftLeft')
+  await page.keyboard.up('Space')
 })
