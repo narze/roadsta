@@ -41,8 +41,8 @@ describe('airTurnDelta', () => {
     expect(airTurnDelta(0, 0, 0.3, KEYBOARD_MAX_TURN)).toBeCloseTo(0.3) // smaller turns are not changed
   })
 
-  it('keyboard turns are limited to 45 degrees', () => {
-    expect(KEYBOARD_MAX_TURN).toBeCloseTo(Math.PI / 4)
+  it('keyboard turns are limited to 20 degrees', () => {
+    expect(KEYBOARD_MAX_TURN).toBeCloseTo(Math.PI / 9)
   })
 
   it('does not turn when the car already faces about that way', () => {
