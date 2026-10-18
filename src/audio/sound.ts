@@ -34,6 +34,7 @@ class Sound {
   private ctx: AudioContext | null = null
   private muted = false
   private lastLand = -1
+  private lastStart = -1
 
   // Call from a click/tap handler.
   start() {
@@ -88,7 +89,10 @@ class Sound {
     if (this.log.length > LOG_SIZE) this.log.shift()
     const n = this.nodes
     if (!n || !this.tone) return
-    const now = this.tone.now()
+    // Tone.js synths throw if a start time is not later than the previous one,
+    // and one physics step can play two sounds on the same synth.
+    const now = Math.max(this.tone.now(), this.lastStart + 0.001)
+    this.lastStart = now
     switch (name) {
       case 'hop':
         n.puff.triggerAttackRelease(0.12, now)
@@ -169,4 +173,5 @@ export const sound = new Sound()
   log: sound.log,
   state: () => sound.state(),
   muted: () => sound.isMuted(),
+  play: (name: SfxName) => sound.play(name),
 }
