@@ -1,3 +1,7 @@
+import { useKeyboardControls } from '@react-three/drei'
+import { useEffect } from 'react'
+import { sound } from '../audio/sound'
+import { Control } from './controls'
 import { RING_COUNT, useGame } from './store'
 import { TouchControls } from './TouchControls'
 import { useIsTouch } from './useIsTouch'
@@ -8,7 +12,11 @@ const fmt = (s: number | null) => (s === null ? '-' : `${s.toFixed(2)} s`)
 export function Hud() {
   const g = useGame()
   const touch = useIsTouch()
+  const [subscribeKeys] = useKeyboardControls<keyof typeof Control>()
+  const toggleMute = useGame((s) => s.toggleMute)
+  useEffect(() => subscribeKeys((s) => s.mute, (pressed) => { if (pressed) toggleMute() }), [subscribeKeys, toggleMute])
   const start = () => {
+    sound.start() // must run inside the tap/click, or the browser blocks audio
     // On phones, go full screen in landscape where the browser allows it.
     if (touch) {
       document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
@@ -26,6 +34,10 @@ export function Hud() {
         <div className="small">{g.courseTime !== null ? `Course done in ${g.courseTime.toFixed(2)} s` : 'Fly through all rings'}</div>
         <div className="small">Trick score <b data-testid="score">{g.score}</b></div>
       </div>
+
+      <button className={touch ? 'icon-btn mute touch' : 'icon-btn mute'} aria-label={g.muted ? 'Unmute sound' : 'Mute sound'} onClick={g.toggleMute}>
+        {g.muted ? '🔇' : '🔊'}
+      </button>
 
       {g.toast && (
         <div key={g.toast.id} className={`toast ${g.toast.tone}`} data-testid="toast">{g.toast.text}</div>
@@ -68,7 +80,7 @@ export function Hud() {
                 <li><kbd>Space</kbd> hop - press again in the air for a free double jump, hold it to hover</li>
               <li>In the air, hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd> kickflip, <kbd>↑</kbd> front flip, <kbd>↓</kbd> backflip</li>
                 <li><kbd>Shift</kbd> boost - 0-60 mph in under 1 s. In the air, <kbd>Shift</kbd> + a direction faces that way on screen</li>
-                <li><kbd>Enter</kbd> reset to the start line</li>
+                <li><kbd>Enter</kbd> reset to the start line · <kbd>M</kbd> mute sound</li>
               </ul>
             )}
             <p className="note">Thruster gas is limited. It refills when you drive on the road, and each finished trick gives back 30%. Finish each spin before you land, or you lose your speed.</p>

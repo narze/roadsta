@@ -7,6 +7,7 @@ export const Control = {
   jump: 'jump',
   boost: 'boost',
   reset: 'reset',
+  mute: 'mute',
 } as const
 
 export const keyMap = [
@@ -17,4 +18,5 @@ export const keyMap = [
   { name: Control.jump, keys: ['Space'] },
   { name: Control.boost, keys: ['ShiftLeft', 'ShiftRight'] },
   { name: Control.reset, keys: ['Backspace', 'Enter'] },
+  { name: Control.mute, keys: ['KeyM'] },
 ]

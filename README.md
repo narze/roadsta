@@ -26,6 +26,7 @@ pnpm dev
 | Shift | Thruster boost (0-60 mph in under 1 s) |
 | In the air: Shift + an arrow (or diagonal) | Air turn: instantly face that direction on screen, keeping your speed (once per jump) |
 | Enter or Backspace | Reset to the start line |
+| M | Mute / unmute sound (remembered) |
 | In the air: hold Space + ← / → | Kickflip left / right |
 | In the air: hold Space + ↑ / ↓ | Front flip / backflip |
 
@@ -35,6 +36,10 @@ While you hold Hop in the air, flick your finger left/right for a kickflip, or u
 
 Each finished trick restores 30% of the thruster gas. Finish each spin before you land. A clean landing scores points (combos multiply them).
 Landing mid-spin is a bad landing and costs most of your speed.
+
+## Sound
+
+All sounds are synthesized with [Tone.js](https://tonejs.github.io/) - no audio files: an electric motor whine that rises with speed, thruster hiss for hover and boost, and one-shot sounds for hops, the air turn, tricks, landings, rings, and the finish. Audio starts on the Start tap (browsers block sound before a tap), and Tone.js loads only then.
 
 ## Test
 
