@@ -16,6 +16,7 @@ type GameState = {
   hovering: boolean
   boosting: boolean
   altitude: number
+  heading: number // yaw in radians
   trick: TrickKind | null
   launch: LaunchTimer
   rings: number
@@ -42,6 +43,7 @@ export const useGame = create<GameState>((set, get) => ({
   hovering: false,
   boosting: false,
   altitude: 0,
+  heading: 0,
   trick: null,
   launch: initialLaunchTimer(),
   rings: 0,

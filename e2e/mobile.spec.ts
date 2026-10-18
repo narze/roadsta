@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true })
 
-type Hud = { mph: number; gas: number; airborne: boolean; hovering: boolean; trick: string | null; score: number }
+type Hud = { mph: number; gas: number; airborne: boolean; hovering: boolean; trick: string | null; score: number; heading: number }
 const hud = (page: Page) => page.evaluate(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState())
 
 async function start(page: Page) {
@@ -59,6 +59,29 @@ test('flicking up on the hop button in the air does a front flip', async ({ page
   await expect.poll(async () => (await hud(page)).score, { timeout: 60_000 }).toBeGreaterThan(0)
   await expect(page.getByTestId('toast')).toContainText('Front flip')
   await page.mouse.up()
+})
+
+test('tapping Boost in the air with the joystick pulled back turns the car around', async ({ page }) => {
+  await start(page)
+  // Real multi-touch, like two thumbs: hold Hop, pull the joystick down, then tap Boost.
+  const cdp = await page.context().newCDPSession(page)
+  const hop = await center(page.getByRole('button', { name: 'Hop' }))
+  const boost = await center(page.getByRole('button', { name: 'Boost' }))
+  const joy = await center(page.getByTestId('joystick-zone'))
+  const pt = (p: { x: number; y: number }, id: number) => ({ x: p.x, y: p.y, id })
+  const touch = (type: string, points: ReturnType<typeof pt>[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+
+  await touch('touchStart', [pt(hop, 1)])
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  const before = (await hud(page)).heading
+  await touch('touchStart', [pt(hop, 1), pt(joy, 0)])
+  await touch('touchMove', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
+  await touch('touchStart', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0), pt(boost, 2)])
+  await touch('touchEnd', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
+
+  const turned = async () => { const h = (await hud(page)).heading; return Math.abs(Math.atan2(Math.sin(h - before), Math.cos(h - before))) }
+  await expect.poll(turned, { timeout: 30_000 }).toBeGreaterThan(Math.PI - 0.2)
+  await touch('touchEnd', [])
 })
 
 test('desktop layout has no touch controls', async ({ browser }) => {

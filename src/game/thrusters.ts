@@ -12,23 +12,30 @@ export const THRUSTER = {
   trickRefill: 30, // gas back for each finished trick (30% of the tank)
 }
 
-// airJumpReady: one free double jump per time in the air, re-armed on the ground.
-export type ThrusterState = { gas: number; airJumpReady: boolean }
+// airJumpReady / airTurnReady: one free double jump and one air turn per time in the air,
+// both re-armed on the ground.
+export type ThrusterState = { gas: number; airJumpReady: boolean; airTurnReady: boolean }
 
 export type ThrusterInput = { hover: boolean; boost: boolean; onGround: boolean }
 
-export const initialThrusters = (): ThrusterState => ({ gas: THRUSTER.capacity, airJumpReady: true })
+export const initialThrusters = (): ThrusterState => ({ gas: THRUSTER.capacity, airJumpReady: true, airTurnReady: true })
 
 export type HopResult = { state: ThrusterState; hopped: boolean; kind?: 'ground' | 'air' }
 
 export function tryHop(state: ThrusterState, onGround: boolean): HopResult {
   if (onGround) {
     if (state.gas < THRUSTER.hopCost) return { state, hopped: false }
-    return { state: { gas: state.gas - THRUSTER.hopCost, airJumpReady: true }, hopped: true, kind: 'ground' }
+    return { state: { ...state, gas: state.gas - THRUSTER.hopCost, airJumpReady: true }, hopped: true, kind: 'ground' }
   }
   // Double jump: free, once per time in the air.
   if (!state.airJumpReady) return { state, hopped: false }
   return { state: { ...state, airJumpReady: false }, hopped: true, kind: 'air' }
+}
+
+// Air turn: free, once per time in the air.
+export function tryAirTurn(state: ThrusterState, airborne: boolean) {
+  if (!airborne || !state.airTurnReady) return { state, turned: false }
+  return { state: { ...state, airTurnReady: false }, turned: true }
 }
 
 export function rewardTrick(state: ThrusterState): ThrusterState {
@@ -48,5 +55,10 @@ export function updateThrusters(state: ThrusterState, input: ThrusterInput, dt: 
   // No refill while Boost is held, so an empty tank cannot feed a sputtering boost forever.
   if (!hovering && !input.boost && input.onGround) gas += THRUSTER.refillPerSec * dt
   gas = Math.min(THRUSTER.capacity, Math.max(0, gas))
-  return { state: { gas, airJumpReady: state.airJumpReady || input.onGround }, hovering, boosting }
+  const rearm = input.onGround
+  return {
+    state: { gas, airJumpReady: state.airJumpReady || rearm, airTurnReady: state.airTurnReady || rearm },
+    hovering,
+    boosting,
+  }
 }
