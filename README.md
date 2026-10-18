@@ -24,7 +24,7 @@ pnpm dev
 | Arrow keys or WASD | Drive |
 | Space | Hop - press again in the air for a free double jump, hold it to hover |
 | Shift | Thruster boost (0-60 mph in under 1 s) |
-| In the air: Shift + an arrow (or diagonal) | Air turn: instantly turn up to 45° toward that direction on screen, keeping your speed (once per jump) |
+| In the air: Shift + an arrow (or diagonal) | Air turn: instantly turn up to 20° toward that direction on screen, keeping your speed (once per jump) |
 | Enter or Backspace | Reset to the start line |
 | M | Mute / unmute sound (remembered) |
 | In the air: hold Space + ← / → | Kickflip left / right |

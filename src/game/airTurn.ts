@@ -2,8 +2,8 @@
 // as seen from the camera (up = into the screen, left = screen left), at the exact pushed angle.
 const MIN_INPUT = 0.5 // ignore small stick pushes
 const MIN_DELTA = 0.17 // radians (~10 degrees); if the car already faces about that way, it is just a boost
-// Arrow keys only give 8 directions, so a full snap feels too sharp. Keyboard turns stop at 45 degrees.
-export const KEYBOARD_MAX_TURN = Math.PI / 4
+// Arrow keys only give 8 directions, so a full snap feels too sharp. Keyboard turns stop at 20 degrees.
+export const KEYBOARD_MAX_TURN = Math.PI / 9
 
 // forward: push up / away (+1). left: push left (+1). Returns radians, positive = left of "up".
 export function inputAngle(forward: number, left: number): number | null {

@@ -79,7 +79,7 @@ export function Hud() {
                 <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</li>
                 <li><kbd>Space</kbd> hop - press again in the air for a free double jump, hold it to hover</li>
               <li>In the air, hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd> kickflip, <kbd>↑</kbd> front flip, <kbd>↓</kbd> backflip</li>
-                <li><kbd>Shift</kbd> boost - 0-60 mph in under 1 s. In the air, <kbd>Shift</kbd> + a direction turns up to 45° toward that way on screen</li>
+                <li><kbd>Shift</kbd> boost - 0-60 mph in under 1 s. In the air, <kbd>Shift</kbd> + a direction turns up to 20° toward that way on screen</li>
                 <li><kbd>Enter</kbd> reset to the start line · <kbd>M</kbd> mute sound</li>
               </ul>
             )}

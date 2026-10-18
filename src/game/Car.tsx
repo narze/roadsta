@@ -175,7 +175,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     }
 
     // Air turn: Boost pressed in the air with a direction held snaps the car to face that direction
-    // as seen from the camera, at the exact pushed angle (keyboard: at most 45 degrees).
+    // as seen from the camera, at the exact pushed angle (keyboard: at most 20 degrees).
     // Speed carries along the new heading.
     const boostPressed = active && boostQueued.current
     const request = active ? turnRequest.current : null
