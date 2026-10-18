@@ -63,7 +63,7 @@ test('flicking up on the hop button in the air does a front flip', async ({ page
 
 test('tapping Boost in the air with the joystick pulled back turns the car around', async ({ page }) => {
   await start(page)
-  // Real multi-touch, like two thumbs: hold Hop, pull the joystick down, then tap Boost.
+  // Real multi-touch, like two thumbs: pull the joystick back, hold Hop, then tap Boost in the air.
   const cdp = await page.context().newCDPSession(page)
   const hop = await center(page.getByRole('button', { name: 'Hop' }))
   const boost = await center(page.getByRole('button', { name: 'Boost' }))
@@ -71,18 +71,19 @@ test('tapping Boost in the air with the joystick pulled back turns the car aroun
   const pt = (p: { x: number; y: number }, id: number) => ({ x: p.x, y: p.y, id })
   const touch = (type: string, points: ReturnType<typeof pt>[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
 
-  await touch('touchStart', [pt(hop, 1)])
-  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  // On a slow CI machine each touch command takes ~1.5 s, so set up everything on the ground and
+  // send only one command (the Boost tap) while the car is in the air. Hold Hop to hover longer.
+  const back = { x: joy.x, y: joy.y + 60 }
+  await touch('touchStart', [pt(joy, 0)])
+  await touch('touchMove', [pt(back, 0)]) // pull back: no sideways input, so no air-steer drift
   const before = (await hud(page)).heading
-  await touch('touchStart', [pt(hop, 1), pt(joy, 0)])
-  await touch('touchMove', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
-  await touch('touchStart', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0), pt(boost, 2)])
-  // Lift only the Boost finger: list the fingers that stay down (touchEnd would lift all of them).
-  await touch('touchMove', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
+  await touch('touchStart', [pt(back, 0), pt(hop, 1)])
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  await touch('touchStart', [pt(back, 0), pt(hop, 1), pt(boost, 2)])
 
   const turned = async () => { const h = (await hud(page)).heading; return Math.abs(Math.atan2(Math.sin(h - before), Math.cos(h - before))) }
   await expect.poll(turned, { timeout: 30_000 }).toBeGreaterThan(Math.PI - 0.2)
-  await touch('touchEnd', [])
+  await touch('touchEnd', []) // lift all fingers
 })
 
 test('desktop layout has no touch controls', async ({ browser }) => {
