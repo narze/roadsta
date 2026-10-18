@@ -86,6 +86,42 @@ test('tapping Boost in the air with the joystick pulled back turns the car aroun
   await touch('touchEnd', []) // lift all fingers
 })
 
+test('the air turn follows the exact joystick angle, not a fixed 90 degrees', async ({ page }) => {
+  await start(page)
+  const cdp = await page.context().newCDPSession(page)
+  const hop = await center(page.getByRole('button', { name: 'Hop' }))
+  const boost = await center(page.getByRole('button', { name: 'Boost' }))
+  const joy = await center(page.getByTestId('joystick-zone'))
+  const pt = (p: { x: number; y: number }, id: number) => ({ x: p.x, y: p.y, id })
+  const touch = (type: string, points: ReturnType<typeof pt>[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+
+  // Record the largest heading jump between HUD updates: that is the snap, without the slow air-steer drift.
+  await page.evaluate(() => {
+    const w = window as unknown as { __roadster: { getState: () => { heading: number } }; __snap: number }
+    w.__snap = 0
+    let last = w.__roadster.getState().heading
+    const tick = () => {
+      const h = w.__roadster.getState().heading
+      const d = Math.atan2(Math.sin(h - last), Math.cos(h - last))
+      if (Math.abs(d) > Math.abs(w.__snap)) w.__snap = d
+      last = h
+      requestAnimationFrame(tick)
+    }
+    tick()
+  })
+
+  await touch('touchStart', [pt(hop, 1)]) // hop and hover
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  // Joystick 30 degrees right of up, and Boost, in one command (slow CI: ~1.5 s per command).
+  const r = 60
+  const stick = { x: joy.x + r * Math.sin(Math.PI / 6), y: joy.y - r * Math.cos(Math.PI / 6) }
+  await touch('touchStart', [pt(hop, 1), pt(stick, 0), pt(boost, 2)])
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __snap: number }).__snap), { timeout: 30_000 }).toBeLessThan(-0.3)
+  const snap = await page.evaluate(() => (window as unknown as { __snap: number }).__snap)
+  expect(snap).toBeCloseTo(-Math.PI / 6, 1) // 30 degrees right, within about 3 degrees
+  await touch('touchEnd', [])
+})
+
 test('desktop layout has no touch controls', async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
   await page.goto('/')

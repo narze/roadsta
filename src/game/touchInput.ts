@@ -20,6 +20,7 @@ export function stickToDrive(v: { x: number; y: number }) {
 type TouchInput = {
   throttle: number
   steer: number
+  stick: { x: number; y: number } // raw joystick vector, for exact angles
   jump: boolean
   boost: boolean
   // Latest flick on the Hop button. The id changes on every flick.
@@ -33,10 +34,11 @@ type TouchInput = {
 export const useTouchInput = create<TouchInput>((set) => ({
   throttle: 0,
   steer: 0,
+  stick: { x: 0, y: 0 },
   jump: false,
   boost: false,
   trick: null,
-  setStick: (v) => set(stickToDrive(v)),
+  setStick: (v) => set({ ...stickToDrive(v), stick: { x: v.x, y: v.y } }),
   setJump: (jump) => set({ jump }),
   setBoost: (boost) => set({ boost }),
   requestTrick: (kind) => set((s) => ({ trick: { kind, id: (s.trick?.id ?? 0) + 1 } })),

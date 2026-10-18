@@ -1,28 +1,42 @@
 import { describe, expect, it } from 'vitest'
-import { airTurnAngle } from './airTurn'
+import { airTurnDelta, inputAngle } from './airTurn'
 import { initialThrusters, tryAirTurn, updateThrusters } from './thrusters'
 
-// throttle: +1 forward / -1 back. steer: +1 left / -1 right (same as the driving input).
-describe('airTurnAngle', () => {
-  it('turns 90 degrees left or right', () => {
-    expect(airTurnAngle(0, 1)).toBeCloseTo(Math.PI / 2)
-    expect(airTurnAngle(0, -1)).toBeCloseTo(-Math.PI / 2)
+// Input angle: forward = push up / away, left = push left. Radians, positive = left of "up".
+describe('inputAngle', () => {
+  it('reads the exact analog angle of the push', () => {
+    expect(inputAngle(1, 0)).toBeCloseTo(0)
+    expect(inputAngle(0, 1)).toBeCloseTo(Math.PI / 2)
+    expect(inputAngle(0, -1)).toBeCloseTo(-Math.PI / 2)
+    expect(inputAngle(Math.cos(Math.PI / 6), -Math.sin(Math.PI / 6))).toBeCloseTo(-Math.PI / 6) // 30 degrees right
+    expect(Math.abs(inputAngle(-1, 0)!)).toBeCloseTo(Math.PI)
   })
 
-  it('turns around when pulling back', () => {
-    expect(Math.abs(airTurnAngle(-1, 0)!)).toBeCloseTo(Math.PI)
+  it('ignores no input or a tiny push', () => {
+    expect(inputAngle(0, 0)).toBeNull()
+    expect(inputAngle(0.2, -0.2)).toBeNull()
+  })
+})
+
+// Turn needed so the car faces the pushed direction as seen from the camera.
+describe('airTurnDelta', () => {
+  it('with the camera behind the car, matches the push angle', () => {
+    expect(airTurnDelta(0, 0, Math.PI / 2)).toBeCloseTo(Math.PI / 2)
+    expect(airTurnDelta(1, 1, -Math.PI / 6)).toBeCloseTo(-Math.PI / 6)
   })
 
-  it('turns 45 and 135 degrees for diagonals', () => {
-    expect(airTurnAngle(1, 1)).toBeCloseTo(Math.PI / 4)
-    expect(airTurnAngle(-1, -1)).toBeCloseTo((-3 * Math.PI) / 4)
+  it('is relative to the camera, not the car', () => {
+    // Car points 0.5 rad left of the camera. Pushing up means "face where the camera looks".
+    expect(airTurnDelta(0.5, 0, 0)).toBeCloseTo(-0.5)
   })
 
-  it('does not turn with no direction, a tiny push, or straight ahead', () => {
-    expect(airTurnAngle(0, 0)).toBeNull()
-    expect(airTurnAngle(0.2, -0.2)).toBeNull()
-    expect(airTurnAngle(1, 0)).toBeNull()
-    expect(airTurnAngle(1, 0.1)).toBeNull()
+  it('takes the short way around across the +/-180 degree line', () => {
+    expect(airTurnDelta(Math.PI - 0.1, -Math.PI + 0.1, 0)).toBeCloseTo(0.2)
+  })
+
+  it('does not turn when the car already faces about that way', () => {
+    expect(airTurnDelta(0, 0, 0)).toBeNull()
+    expect(airTurnDelta(0, 0.1, 0)).toBeNull()
   })
 })
 
