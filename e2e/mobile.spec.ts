@@ -77,7 +77,8 @@ test('tapping Boost in the air with the joystick pulled back turns the car aroun
   await touch('touchStart', [pt(hop, 1), pt(joy, 0)])
   await touch('touchMove', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
   await touch('touchStart', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0), pt(boost, 2)])
-  await touch('touchEnd', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
+  // Lift only the Boost finger: list the fingers that stay down (touchEnd would lift all of them).
+  await touch('touchMove', [pt(hop, 1), pt({ x: joy.x, y: joy.y + 60 }, 0)])
 
   const turned = async () => { const h = (await hud(page)).heading; return Math.abs(Math.atan2(Math.sin(h - before), Math.cos(h - before))) }
   await expect.poll(turned, { timeout: 30_000 }).toBeGreaterThan(Math.PI - 0.2)
