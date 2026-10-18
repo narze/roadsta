@@ -47,7 +47,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 5
 }
 
 .hud.touch .overlay { overflow-y: auto; padding: 12px 0; }
-.hud.touch .card { padding: 18px 22px; }
+.hud.touch .card { width: min(600px, calc(100vw - 32px)); padding: 18px 22px; }
 .hud.touch .card h1 { font-size: 26px; }
 .hud.touch .card .sub { margin-bottom: 8px; }
 .hud.touch .card ul { line-height: 1.5; font-size: 14px; }

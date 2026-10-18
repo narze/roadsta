@@ -57,9 +57,9 @@ export function Hud() {
             {touch ? (
               <ul>
                 <li><b>Left thumb</b> - joystick: up to drive, down to brake, sideways to steer</li>
-                <li><b>Hop</b> - tap again in the air for a free double jump, hold it to hover</li>
+                <li><b>Hop</b> - tap again in the air to double jump, hold to hover</li>
                 <li><b>Tricks</b> - hold Hop, then flick: ←/→ kickflip, ↑ front flip, ↓ backflip</li>
-                <li><b>Boost</b> - 0-60 mph in under 1 s</li>
+                <li><b>Boost</b> - 0-60 in under 1 s. In the air: joystick + tap Boost to turn instantly</li>
                 <li><b>↺</b> - reset to the start line</li>
               </ul>
             ) : (
@@ -67,7 +67,7 @@ export function Hud() {
                 <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</li>
                 <li><kbd>Space</kbd> hop - press again in the air for a free double jump, hold it to hover</li>
               <li>In the air, hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd> kickflip, <kbd>↑</kbd> front flip, <kbd>↓</kbd> backflip</li>
-                <li><kbd>Shift</kbd> thruster boost - 0-60 mph in under 1 s</li>
+                <li><kbd>Shift</kbd> boost - 0-60 mph in under 1 s. In the air, <kbd>Shift</kbd> + a direction turns that way instantly</li>
                 <li><kbd>Enter</kbd> reset to the start line</li>
               </ul>
             )}

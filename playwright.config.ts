@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: process.env.CI ? 120_000 : 60_000,
   use: {
+    trace: process.env.CI ? 'retain-on-failure' : 'off',
     baseURL: 'http://localhost:5199',
     launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },

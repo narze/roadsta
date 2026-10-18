@@ -9,7 +9,8 @@ import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
-import { boostAcceleration, initialThrusters, rewardTrick, THRUSTER, tryHop, updateThrusters } from './thrusters'
+import { airTurnAngle } from './airTurn'
+import { boostAcceleration, initialThrusters, rewardTrick, THRUSTER, tryAirTurn, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
 import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
 
@@ -31,10 +32,18 @@ const DRIVE = {
   hoverLift: 0.6, // target vertical speed while hovering
 }
 
+const UP = new THREE.Vector3(0, 1, 0)
 const forward = new THREE.Vector3()
 const right = new THREE.Vector3()
 const quat = new THREE.Quaternion()
 const euler = new THREE.Euler()
+
+// Yaw in radians from a rotation quaternion (the body only rotates around Y).
+const headingQuat = new THREE.Quaternion()
+const headingEuler = new THREE.Euler()
+function headingOf(r: { x: number; y: number; z: number; w: number }) {
+  return headingEuler.setFromQuaternion(headingQuat.set(r.x, r.y, r.z, r.w), 'YXZ').y
+}
 
 export function Car({ target }: { target: React.RefObject<THREE.Object3D | null> }) {
   const body = useRef<RapierRigidBody>(null)
@@ -47,10 +56,13 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
   const fx = useRef<ThrusterFx>({ hover: 0, boost: 0 })
   const thrusters = useRef(initialThrusters())
   const jumpQueued = useRef(false)
+  const boostQueued = useRef(false)
+  // Direction saved from an arrow pressed while Shift is held, so a quick tap still turns.
+  const turnRequest = useRef<{ throttle: number; steer: number } | null>(null)
   const resetHeld = useRef(false)
   const hudTimer = useRef(0)
   const launch = useRef(initialLaunchTimer())
-  const sim = useRef({ fwd: 0, vy: 0, turn: 0, mph: 0, airborne: false, hovering: false, boosting: false, hopBurst: false })
+  const sim = useRef({ fwd: 0, vy: 0, turn: 0, mph: 0, airborne: false, hovering: false, boosting: false, hopBurst: false, turnBurst: false })
   const { world, rapier } = useRapier()
   const [subscribeKeys, getKeys] = useKeyboardControls<keyof typeof Control>()
 
@@ -61,19 +73,32 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
     const queue = (pressed: boolean) => { if (pressed) jumpQueued.current = true }
     const offKeys = subscribeKeys((s) => s.jump, queue)
     const offTouch = useTouchInput.subscribe((s, prev) => { if (s.jump !== prev.jump) queue(s.jump) })
-    return () => { offKeys(); offTouch() }
+    // Boost presses are queued too: in the air, a press can trigger the air turn.
+    const queueBoost = (pressed: boolean) => { if (pressed) boostQueued.current = true }
+    const offBoostKeys = subscribeKeys((s) => s.boost, queueBoost)
+    const offBoostTouch = useTouchInput.subscribe((s, prev) => { if (s.boost !== prev.boost) queueBoost(s.boost) })
+    return () => { offKeys(); offTouch(); offBoostKeys(); offBoostTouch() }
   }, [subscribeKeys])
 
   // Tricks: hold Space in the air and tap an arrow, or flick on the Hop button.
   useEffect(() => {
-    const onArrow = (kind: TrickKind) => (pressed: boolean) => {
-      if (pressed && getKeys().jump) trickQueued.current = kind
+    // Boost has priority: an arrow pressed while Shift is held asks for an air turn, not a trick.
+    type Arrow = 'left' | 'right' | 'forward' | 'back'
+    const onArrow = (kind: TrickKind, arrow: Arrow) => (pressed: boolean) => {
+      if (!pressed) return
+      const keys = { ...getKeys(), [arrow]: true }
+      if (keys.boost) {
+        turnRequest.current = {
+          throttle: (keys.forward ? 1 : 0) - (keys.back ? 1 : 0),
+          steer: (keys.left ? 1 : 0) - (keys.right ? 1 : 0),
+        }
+      } else if (keys.jump) trickQueued.current = kind
     }
     const offs = [
-      subscribeKeys((s) => s.left, onArrow('kickflipLeft')),
-      subscribeKeys((s) => s.right, onArrow('kickflipRight')),
-      subscribeKeys((s) => s.forward, onArrow('frontFlip')),
-      subscribeKeys((s) => s.back, onArrow('backFlip')),
+      subscribeKeys((s) => s.left, onArrow('kickflipLeft', 'left')),
+      subscribeKeys((s) => s.right, onArrow('kickflipRight', 'right')),
+      subscribeKeys((s) => s.forward, onArrow('frontFlip', 'forward')),
+      subscribeKeys((s) => s.back, onArrow('backFlip', 'back')),
       useTouchInput.subscribe((s, prev) => { if (s.trick && s.trick !== prev.trick) trickQueued.current = s.trick.kind }),
     ]
     return () => offs.forEach((off) => off())
@@ -143,6 +168,30 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         hopGrace.current = HOP_GRACE
       }
     }
+
+    // Air turn: Boost pressed in the air with a direction held snaps the car to face that way.
+    // Speed is kept in the car's own frame, so it now carries along the new heading.
+    const boostPressed = active && boostQueued.current
+    const request = active ? turnRequest.current : null
+    boostQueued.current = false
+    turnRequest.current = null
+    let turned = false
+    const angle = !airborne ? null
+      : request ? airTurnAngle(request.throttle, request.steer)
+      : boostPressed ? airTurnAngle(throttle, steer)
+      : null
+    if (angle !== null) {
+      const airTurn = tryAirTurn(thrusters.current, airborne)
+      thrusters.current = airTurn.state
+      if (airTurn.turned) {
+        const yaw = euler.y + angle
+        forward.set(Math.sin(yaw), 0, Math.cos(yaw))
+        right.set(-forward.z, 0, forward.x)
+        b.setRotation(quat.setFromAxisAngle(UP, yaw), true)
+        turned = true
+      }
+    }
+
     const t = updateThrusters(
       thrusters.current,
       { hover: active && jumpHeld && airborne && vy < 1, boost: active && (keys.boost || touch.boost), onGround: !airborne },
@@ -202,6 +251,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       hovering: t.hovering,
       boosting: t.boosting,
       hopBurst: sim.current.hopBurst || hopped,
+      turnBurst: sim.current.turnBurst || turned,
     })
   })
 
@@ -231,8 +281,9 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
 
     // A hop fires a short burst; hover and boost hold a steady flame.
     fx.current.hover = s.hopBurst ? 1.6 : THREE.MathUtils.damp(fx.current.hover, s.hovering ? 1 : 0, 12, dt)
-    fx.current.boost = THREE.MathUtils.damp(fx.current.boost, s.boosting ? 1 : 0, 12, dt)
+    fx.current.boost = s.turnBurst ? 1.6 : THREE.MathUtils.damp(fx.current.boost, s.boosting ? 1 : 0, 12, dt)
     s.hopBurst = false
+    s.turnBurst = false
 
     // Throttle HUD updates to about 20 Hz.
     hudTimer.current += dt
@@ -246,6 +297,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         boosting: s.boosting,
         altitude: Math.max(0, pos.y - HALF_HEIGHT),
         launch: launch.current,
+        heading: headingOf(b.rotation()),
         trick: tricks.current.active,
       })
     }
