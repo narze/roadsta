@@ -1,5 +1,5 @@
 import { useKeyboardControls } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
@@ -9,7 +9,7 @@ import { Control } from './controls'
 import { initialLaunchTimer, updateLaunchTimer } from './launchTimer'
 import { useGame } from './store'
 import { GRAVITY } from './physics'
-import { airTurnAngle } from './airTurn'
+import { airTurnDelta, inputAngle } from './airTurn'
 import { boostAcceleration, initialThrusters, rewardTrick, THRUSTER, tryAirTurn, tryHop, updateThrusters } from './thrusters'
 import { useTouchInput } from './touchInput'
 import { initialTricks, land, startTrick, TRICK_NAMES, trickRotation, updateTricks, type TrickKind } from './tricks'
@@ -33,6 +33,7 @@ const DRIVE = {
 }
 
 const UP = new THREE.Vector3(0, 1, 0)
+const cameraDir = new THREE.Vector3()
 const forward = new THREE.Vector3()
 const right = new THREE.Vector3()
 const quat = new THREE.Quaternion()
@@ -64,6 +65,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
   const launch = useRef(initialLaunchTimer())
   const sim = useRef({ fwd: 0, vy: 0, turn: 0, mph: 0, airborne: false, hovering: false, boosting: false, hopBurst: false, turnBurst: false })
   const { world, rapier } = useRapier()
+  const camera = useThree((s) => s.camera)
   const [subscribeKeys, getKeys] = useKeyboardControls<keyof typeof Control>()
 
   useEffect(() => useGame.getState().setReady(), [])
@@ -169,26 +171,31 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       }
     }
 
-    // Air turn: Boost pressed in the air with a direction held snaps the car to face that way.
-    // Speed is kept in the car's own frame, so it now carries along the new heading.
+    // Air turn: Boost pressed in the air with a direction held snaps the car to face that direction
+    // as seen from the camera, at the exact pushed angle. Speed carries along the new heading.
     const boostPressed = active && boostQueued.current
     const request = active ? turnRequest.current : null
     boostQueued.current = false
     turnRequest.current = null
     let turned = false
+    const keysHeld = keyThrottle !== 0 || keySteer !== 0
     const angle = !airborne ? null
-      : request ? airTurnAngle(request.throttle, request.steer)
-      : boostPressed ? airTurnAngle(throttle, steer)
-      : null
-    if (angle !== null) {
+      : request ? inputAngle(request.throttle, request.steer)
+      : !boostPressed ? null
+      : keysHeld ? inputAngle(keyThrottle, keySteer)
+      : inputAngle(touch.stick.y, -touch.stick.x) // raw stick: exact angle, no per-axis dead zone
+    camera.getWorldDirection(cameraDir)
+    const delta = angle === null ? null : airTurnDelta(euler.y, Math.atan2(cameraDir.x, cameraDir.z), angle)
+    if (delta !== null) {
       const airTurn = tryAirTurn(thrusters.current, airborne)
       thrusters.current = airTurn.state
       if (airTurn.turned) {
-        const yaw = euler.y + angle
+        const yaw = euler.y + delta
         forward.set(Math.sin(yaw), 0, Math.cos(yaw))
         right.set(-forward.z, 0, forward.x)
         b.setRotation(quat.setFromAxisAngle(UP, yaw), true)
         turned = true
+        useGame.setState({ lastAirTurn: delta })
       }
     }
 

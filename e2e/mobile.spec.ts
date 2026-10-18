@@ -86,6 +86,28 @@ test('tapping Boost in the air with the joystick pulled back turns the car aroun
   await touch('touchEnd', []) // lift all fingers
 })
 
+test('the air turn follows the exact joystick angle, not a fixed 90 degrees', async ({ page }) => {
+  await start(page)
+  const cdp = await page.context().newCDPSession(page)
+  const hop = await center(page.getByRole('button', { name: 'Hop' }))
+  const boost = await center(page.getByRole('button', { name: 'Boost' }))
+  const joy = await center(page.getByTestId('joystick-zone'))
+  const pt = (p: { x: number; y: number }, id: number) => ({ x: p.x, y: p.y, id })
+  const touch = (type: string, points: ReturnType<typeof pt>[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+
+  await touch('touchStart', [pt(hop, 1)]) // hop and hover
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
+  // Joystick 30 degrees right of up, and Boost, in one command (slow CI: ~1.5 s per command).
+  const r = 60
+  const stick = { x: joy.x + r * Math.sin(Math.PI / 6), y: joy.y - r * Math.cos(Math.PI / 6) }
+  await touch('touchStart', [pt(hop, 1), pt(stick, 0), pt(boost, 2)])
+  // The game records the exact yaw change of the snap (heading samples would include air-steer drift).
+  const lastTurn = () => page.evaluate(() => (window as unknown as { __roadster: { getState: () => { lastAirTurn: number | null } } }).__roadster.getState().lastAirTurn)
+  await expect.poll(lastTurn, { timeout: 30_000 }).not.toBeNull()
+  expect(await lastTurn()).toBeCloseTo(-Math.PI / 6, 1) // 30 degrees right, within about 3 degrees
+  await touch('touchEnd', [])
+})
+
 test('desktop layout has no touch controls', async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
   await page.goto('/')

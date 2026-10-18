@@ -17,6 +17,7 @@ type GameState = {
   boosting: boolean
   altitude: number
   heading: number // yaw in radians
+  lastAirTurn: number | null // yaw change of the latest air turn, in radians
   trick: TrickKind | null
   launch: LaunchTimer
   rings: number
@@ -44,6 +45,7 @@ export const useGame = create<GameState>((set, get) => ({
   boosting: false,
   altitude: 0,
   heading: 0,
+  lastAirTurn: null,
   trick: null,
   launch: initialLaunchTimer(),
   rings: 0,
