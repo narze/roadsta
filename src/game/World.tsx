@@ -1,9 +1,10 @@
 import { Instance, Instances } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { CuboidCollider, RigidBody, BallCollider } from '@react-three/rapier'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { BLOCKS, RAMPS, RINGS, ROAD_LENGTH, ROAD_START, ROAD_WIDTH } from './course'
+import { createRoadTexture, DASH_PERIOD } from './roadTexture'
 import { useGame } from './store'
 
 const ROAD_Z = ROAD_START + ROAD_LENGTH / 2
@@ -25,16 +26,28 @@ function Block({ position, size, color = '#c9b79c', rotation }: {
   )
 }
 
+const RAMP_WIDTH = 10
+
+// A wedge that rises from the ground at the near end to `height` at the far end.
+// It sits exactly on the ground, so nothing hides below the ground plane.
 function Ramp({ z, height, length }: { z: number; height: number; length: number }) {
-  const angle = Math.atan2(height, length)
-  const slope = Math.hypot(height, length)
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape([
+      new THREE.Vector2(-length / 2, 0),
+      new THREE.Vector2(length / 2, 0),
+      new THREE.Vector2(length / 2, height),
+    ])
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: RAMP_WIDTH, bevelEnabled: false })
+    geo.translate(0, 0, -RAMP_WIDTH / 2)
+    geo.rotateY(-Math.PI / 2) // shape x -> world z
+    return geo
+  }, [height, length])
   return (
-    <Block
-      position={[0, height / 2 - Math.cos(angle) * 0.5, z]}
-      size={[10, 1, slope]}
-      rotation={[-angle, 0, 0]}
-      color="#e0e3e8"
-    />
+    <RigidBody type="fixed" position={[0, 0, z]} colliders="hull" friction={0}>
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial color="#e0e3e8" roughness={0.9} />
+      </mesh>
+    </RigidBody>
   )
 }
 
@@ -113,25 +126,26 @@ function Scrub() {
   )
 }
 
-function RoadMarkings() {
-  const dashes = useMemo(() => {
-    const list: number[] = []
-    for (let z = ROAD_START + 10; z < ROAD_END - 10; z += 12) list.push(z)
-    return list
-  }, [])
+// Flat layers (ground, road, start line) are stacked by draw order, not by tiny height gaps.
+// Height gaps z-fight on GPUs with low depth precision, which makes the road blink.
+const LAYER = { ground: -2, road: -1, startLine: 0 }
+
+function Road() {
+  const maxAnisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy())
+  const map = useMemo(() => {
+    const tex = createRoadTexture(ROAD_WIDTH, maxAnisotropy)
+    tex.repeat.set(1, ROAD_LENGTH / DASH_PERIOD)
+    return tex
+  }, [maxAnisotropy])
   return (
     <>
-      <Instances limit={dashes.length}>
-        <planeGeometry args={[0.35, 5]} />
-        <meshStandardMaterial color="#cfcfcf" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-8} />
-        {dashes.map((z) => (
-          <Instance key={z} position={[0, 0.012, z]} rotation={[-Math.PI / 2, 0, 0]} />
-        ))}
-      </Instances>
-      {/* Start line */}
-      <mesh position={[0, 0.013, 3]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, ROAD_Z]} renderOrder={LAYER.road} receiveShadow>
+        <planeGeometry args={[ROAD_WIDTH, ROAD_LENGTH]} />
+        <meshStandardMaterial map={map} roughness={0.85} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 0, 3]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={LAYER.startLine}>
         <planeGeometry args={[ROAD_WIDTH, 0.8]} />
-        <meshStandardMaterial color="#cfcfcf" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-8} />
+        <meshStandardMaterial color="#cfcfcf" depthWrite={false} />
       </mesh>
     </>
   )
@@ -144,15 +158,11 @@ export function World() {
       <RigidBody type="fixed" colliders={false} friction={0}>
         <CuboidCollider args={[6000, 1, 6000]} position={[0, -1, 0]} />
       </RigidBody>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={LAYER.ground} receiveShadow>
         <planeGeometry args={[12000, 12000]} />
-        <meshStandardMaterial color="#b49a6c" roughness={1} />
+        <meshStandardMaterial color="#b49a6c" roughness={1} depthWrite={false} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, ROAD_Z]} receiveShadow>
-        <planeGeometry args={[ROAD_WIDTH, ROAD_LENGTH]} />
-        <meshStandardMaterial color="#2c2f33" roughness={0.85} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-4} />
-      </mesh>
-      <RoadMarkings />
+      <Road />
 
       {BLOCKS.map((b, i) => (
         <Block key={i} position={b.position} size={b.size} color={b.color} />

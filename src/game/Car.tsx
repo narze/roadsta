@@ -137,7 +137,8 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
       const hop = tryHop(thrusters.current, onGround)
       thrusters.current = hop.state
       if (hop.hopped) {
-        vy = Math.max(vy, 0) + THRUSTER.hopVelocity
+        // A ground hop adds to any upward speed (ramps); a double jump sets it, so it also stops a fall.
+        vy = hop.kind === 'air' ? THRUSTER.hopVelocity : Math.max(vy, 0) + THRUSTER.hopVelocity
         airborne = hopped = true
         hopGrace.current = HOP_GRACE
       }

@@ -50,3 +50,30 @@ test('a finished trick restores thruster gas in the air', async ({ page }) => {
   await expect.poll(async () => (await hud(page)).airborne, { timeout: 15_000 }).toBe(false)
   expect((await hud(page)).gas).toBeGreaterThan(afterHop + 20)
 })
+
+test('pressing Space again in the air does a free double jump', async ({ page }) => {
+  await start(page)
+  // Track the highest point and the lowest gas inside the page, every frame, so slow machines do not miss them.
+  await page.evaluate(() => {
+    const w = window as unknown as { __roadster: { getState: () => Hud }; __maxAlt: number; __minGas: number }
+    w.__maxAlt = 0
+    w.__minGas = 100
+    const tick = () => {
+      const s = w.__roadster.getState() as Hud & { altitude: number }
+      w.__maxAlt = Math.max(w.__maxAlt, s.altitude)
+      w.__minGas = Math.min(w.__minGas, s.gas)
+      requestAnimationFrame(tick)
+    }
+    tick()
+  })
+  await page.keyboard.press('Space')
+  await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => { altitude: number } } }).__roadster.getState().altitude > 1, null, { polling: 'raf' })
+  await page.keyboard.press('Space')
+  await expect.poll(async () => (await hud(page)).airborne, { timeout: 30_000 }).toBe(false)
+  const { maxAlt, minGas } = await page.evaluate(() => {
+    const w = window as unknown as { __maxAlt: number; __minGas: number }
+    return { maxAlt: w.__maxAlt, minGas: w.__minGas }
+  })
+  expect(maxAlt).toBeGreaterThan(4) // one hop peaks near 3.4 m; the second jump starts above 1 m
+  expect(minGas).toBeGreaterThan(65) // only the first hop costs gas (100 -> 70)
+})
