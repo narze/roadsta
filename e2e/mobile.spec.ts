@@ -95,30 +95,16 @@ test('the air turn follows the exact joystick angle, not a fixed 90 degrees', as
   const pt = (p: { x: number; y: number }, id: number) => ({ x: p.x, y: p.y, id })
   const touch = (type: string, points: ReturnType<typeof pt>[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
 
-  // Record the largest heading jump between HUD updates: that is the snap, without the slow air-steer drift.
-  await page.evaluate(() => {
-    const w = window as unknown as { __roadster: { getState: () => { heading: number } }; __snap: number }
-    w.__snap = 0
-    let last = w.__roadster.getState().heading
-    const tick = () => {
-      const h = w.__roadster.getState().heading
-      const d = Math.atan2(Math.sin(h - last), Math.cos(h - last))
-      if (Math.abs(d) > Math.abs(w.__snap)) w.__snap = d
-      last = h
-      requestAnimationFrame(tick)
-    }
-    tick()
-  })
-
   await touch('touchStart', [pt(hop, 1)]) // hop and hover
   await page.waitForFunction(() => (window as unknown as { __roadster: { getState: () => Hud } }).__roadster.getState().airborne, null, { polling: 'raf' })
   // Joystick 30 degrees right of up, and Boost, in one command (slow CI: ~1.5 s per command).
   const r = 60
   const stick = { x: joy.x + r * Math.sin(Math.PI / 6), y: joy.y - r * Math.cos(Math.PI / 6) }
   await touch('touchStart', [pt(hop, 1), pt(stick, 0), pt(boost, 2)])
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __snap: number }).__snap), { timeout: 30_000 }).toBeLessThan(-0.3)
-  const snap = await page.evaluate(() => (window as unknown as { __snap: number }).__snap)
-  expect(snap).toBeCloseTo(-Math.PI / 6, 1) // 30 degrees right, within about 3 degrees
+  // The game records the exact yaw change of the snap (heading samples would include air-steer drift).
+  const lastTurn = () => page.evaluate(() => (window as unknown as { __roadster: { getState: () => { lastAirTurn: number | null } } }).__roadster.getState().lastAirTurn)
+  await expect.poll(lastTurn, { timeout: 30_000 }).not.toBeNull()
+  expect(await lastTurn()).toBeCloseTo(-Math.PI / 6, 1) // 30 degrees right, within about 3 degrees
   await touch('touchEnd', [])
 })
 

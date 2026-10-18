@@ -195,6 +195,7 @@ export function Car({ target }: { target: React.RefObject<THREE.Object3D | null>
         right.set(-forward.z, 0, forward.x)
         b.setRotation(quat.setFromAxisAngle(UP, yaw), true)
         turned = true
+        useGame.setState({ lastAirTurn: delta })
       }
     }
 
